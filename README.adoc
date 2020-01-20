@@ -1,0 +1,26 @@
+[source,json]
+----
+  "hooks-libraries": [
+    {
+      "library": "/usr/lib/kea/hooks/libdhcp_user_chk_ldap.so",
+      "parameters": {
+        "source_type": "ldap",
+        "source": {
+          "host": "ldap.example.somehost",
+          "port": 389,
+          "useStartTls": true,
+          "baseDN": "cn=DHCP,o=example.com",
+          "filter": "(cn=%s)",
+          "bindDN": "cn-dhcp-agent",
+          "bindPwd": "XXXXX"
+        },
+        "cache": {
+          "positiveResultTtl": 20,
+          "negativeResultTtl": 10,
+          "maxSize": 100
+        }
+      }
+    }
+  ]
+
+----

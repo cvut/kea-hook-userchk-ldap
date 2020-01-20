@@ -1,0 +1,8 @@
+// Copyright (C) 2013-2015 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+/// @brief Path to local dir so tests can locate test data files 
+#define USER_CHK_TEST_DIR "@abs_top_srcdir@/src/hooks/dhcp/user_chk/tests"

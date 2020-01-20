@@ -1,0 +1,42 @@
+commands:
+
+  sh: !Command
+    description:
+    container: alpine
+    run: sh
+    environ:
+      HOME: /work
+
+  clean: !Command
+    description:
+    container: alpine
+    run:
+      - make clean
+
+  build: !Command
+    description:
+    container: alpine
+    run: |
+      libtoolize && \
+      aclocal && \
+      autoheader && \
+      autoconf && \
+      automake --add-missing && \
+      ./configure --enable-generate-messages && \
+      make
+    environ:
+      HOME: /work
+
+containers:
+  alpine:
+    setup:
+    - !Alpine v3.11
+    - !Repo community
+    - !Sh |
+        cp /work/.keys/spaceji3@fit.cvut.cz-5ae1b240.rsa.pub /etc/apk/keys
+        echo "http://10.38.5.223/alpine/v3.11/user" >> /etc/apk/repositories
+        apk update
+    - !Sh |
+        apk add kea-dev openldap-c++ clang boost-dev log4cplus-dev automake autoconf libtool g++ make valgrind strace gdb dhcping cppcheck
+    volumes:
+      /usr/local: !Persistent {name: local}
