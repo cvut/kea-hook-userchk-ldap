@@ -67,30 +67,6 @@ UserLdap::open() {
     }
 }
 
-// UserPtr
-// UserLdap::readNextUser(<LdapEntry>cursorPtr) {
-//     if (!isOpen()) {
-//         isc_throw (UserLdapError, "cannot read, file is not open");
-//     }
-
-//     cursorPtr->nextUser();
-
-//     if (file_.good()) {
-//         char buf[USER_ENTRY_MAX_LEN];
-
-//         // Get the next line.
-//         file_.getline(buf, sizeof(buf));
-
-//         // We got something, try to make a user out of it.
-//         if (file_.gcount() > 0) {
-//             return(makeUser(buf));
-//         }
-//     }
-
-//     // Returns an empty user on EOF.
-//     return (UserPtr());
-// }
-
 UserPtr UserLdap::lookupUserById(const UserId& userid) {
 
   // should be sanitized by now

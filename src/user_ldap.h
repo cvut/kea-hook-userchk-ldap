@@ -63,10 +63,6 @@ public:
 /// @endcode
 class UserLdap : public UserDataSource {
 public:
-    /// @brief Maximum length of a single user entry.
-    /// This value is somewhat arbitrary. 4K seems reasonably large.  If it
-    /// goes beyond this, then a flat file is not likely the way to go.
-    static const size_t USER_ENTRY_MAX_LEN = 4096;
 
     /// @brief Constructor
     ///
