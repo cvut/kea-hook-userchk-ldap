@@ -105,7 +105,12 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
       isc_throw(UserLdapError, "UserLdap: cannot create user entry: " << ex.what());
     }
     return user;
-  } catch (LDAPException& ex){
+  } catch (LDAPException& ex) {
+    // we assume the exception was caused by misconfiguration (on hook side
+    // or LDAP server side) or by a network error. In any case, we probably want to
+    // handle the issue in new connection  so we close the connection here
+    // so it can be reopened on the next request
+    close();
     isc_throw(UserLdapError, "UserLdap: caught ldap exception: " << ex.what());
   }
 }
@@ -119,8 +124,8 @@ void
 UserLdap::close() {
   if (!isOpen()) return;
   try {
-    conn_->unbind();
     conn_open_ = false;
+    conn_->unbind();
   } catch (LDAPException &ex) {
     std::cout << "UserLdap unexpected error while closing connection: "
               << ex.what() << std::endl;
