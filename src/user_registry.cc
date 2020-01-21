@@ -84,15 +84,14 @@ UserRegistry::cache(const UserId& id, const ResultPtr result) {
     users_.erase(it);
   }
 
-  if (users_.size() > cache_max_size_) {
+  if (users_.size() >= cache_max_size_) {
     evictCache();
   }
-  // if (users_.size() > cache_max_size_) {
-  //   // remove 10% of oldest entries
-  //   evictCache(0.1);
-  //   return;
-  // }
-  users_[id] = result;
+  // only cache new item if previous step emptied any space
+  // TODO: consider forced eviction of 10% oldest values instead
+  if (users_.size() < cache_max_size_) {
+    users_[id] = result;
+  }
 }
 
 

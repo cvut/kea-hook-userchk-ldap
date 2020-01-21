@@ -59,10 +59,10 @@ UserLdap::open() {
       conn_->bind(binddn_, bindpwd_);
       conn_open_ = true;
     } catch (LDAPException &ex) {
-      isc_throw(UserLdapError, "cannot open connection " << ex.what());
 
       std::cout << "DHCP UserCheckHook : cannot open connection: "
                 << ex.what() << std::endl;
+      isc_throw(UserLdapError, "cannot open connection " << ex.what());
 
     }
 }
@@ -78,8 +78,8 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
 
   try {
     LDAPSearchResults* entries = conn_->search(basedn_,
-                                              LDAPConnection::SEARCH_SUB,
-                                              f);
+                                               LDAPConnection::SEARCH_SUB,
+                                               f);
     if (entries == 0) {
       return UserPtr();
     }
@@ -98,7 +98,7 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
     try {
         // we do not assume that the userid is stored as an LDAP attribute and
         // that it contains necessary metadata (e.g. DUID type), so we just return
-        // copy of the original UserId that was part of the request
+        // copy of the original UserId that was part of the original request
         user.reset(new User(userid));
     } catch (const std::exception& ex) {
         // should not happen

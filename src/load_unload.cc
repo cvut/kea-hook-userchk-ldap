@@ -25,35 +25,6 @@ using namespace user_chk;
 /// @brief Pointer to the registry instance.
 UserRegistryPtr user_registry;
 
-/// @brief Output filestream for recording user check outcomes.
-std::fstream user_chk_output;
-
-/// @brief User registry input file name.
-/// @todo Hard-coded for now, this should be configurable.
-const char* registry_fname = "/tmp/user_chk_registry.txt";
-
-/// @brief User check outcome file name.
-/// @todo Hard-coded for now, this should be configurable.
-const char* user_chk_output_fname = "/tmp/user_chk_outcome.txt";
-
-/// @brief Text label of user id in the inbound query in callout context
-const char* query_user_id_label = "query_user_id";
-
-/// @brief Text label of registered user pointer in callout context
-const char* registered_user_label = "registered_user";
-
-/// @brief Text id used to identify the default IPv4 user in the registry
-/// The format is a string containing an even number of hex digits.  This
-/// value is to look up the default IPv4 user in the user registry for the
-/// the purpose of retrieving default values for user options.
-const char* default_user4_id_str = "00000000";
-
-/// @brief Text id used to identify the default IPv6 user in the registry
-/// The format is a string containing an even number of hex digits.  This
-/// value is to look up the default IPv6 user in the user registry for the
-/// the purpose of retrieving default values for user options.
-const char *default_user6_id_str = "00000000";
-
 UserDataSourcePtr make_datasource(const isc::data::ConstElementPtr source_type,
                                   const std::map<std::string, isc::data::ConstElementPtr>& config_map) {
   if (!source_type) {
@@ -108,20 +79,6 @@ int load(LibraryHandle& handle) {
         // Set the registry's data source
         user_registry->setSource(source);
 
-        // zero out the errno to be safe
-        errno = 0;
-
-        // Open up the output file for user_chk results.
-        user_chk_output.open(user_chk_output_fname,
-                     std::fstream::out | std::fstream::app);
-
-        if (!user_chk_output) {
-            // Grab the system error message.
-            const char* errmsg = strerror(errno);
-            isc_throw(isc::Unexpected, "Cannot open output file: "
-                                       << user_chk_output_fname
-                                       << " reason: " << errmsg);
-        }
     }
     catch (const std::exception& ex) {
         // Log the error and return failure.
@@ -141,9 +98,6 @@ int load(LibraryHandle& handle) {
 int unload() {
     try {
         user_registry.reset();
-        if (user_chk_output.is_open()) {
-            user_chk_output.close();
-        }
     } catch (const std::exception& ex) {
         // On the off chance something goes awry, catch it and log it.
         // @todo Not sure if we should return a non-zero result or not.

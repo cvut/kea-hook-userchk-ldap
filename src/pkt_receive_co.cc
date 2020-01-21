@@ -51,21 +51,13 @@ int pkt4_receive(CalloutHandle& handle) {
         handle.getArgument("query4", query);
         HWAddrPtr hwaddr = query->getHWAddr();
 
-        // Store the id we search with so it is available down the road.
-        handle.setContext(query_user_id_label, hwaddr);
-
         // Look for the user in the registry.
         UserPtr registered_user = user_registry->findUser(*hwaddr);
 
-        if (registered_user) {
-          query->addClass(user_registry->getDefaultClassByResultType(ResultType::REGISTERED));
-        } else {
-          query->addClass(user_registry->getDefaultClassByResultType(ResultType::NOT_REGISTERED));
-        }
+        // Always assign a default class to a query based on registration
+        std::string default_class = user_registry->getDefaultClassByResultType(registered_user ? ResultType::REGISTERED : ResultType::NOT_REGISTERED);
+        query->addClass(default_class);
 
-        // Store user regardless. Empty user pointer means non-found. It is
-        // cheaper to fetch it and test it, than to use an exception throw.
-        handle.setContext(registered_user_label, registered_user);
         std::cout << "DHCP UserCheckHook : pkt4_receive user : "
                   << hwaddr->toText() << " is "
                   << (registered_user ? " registered" : " not registered")
@@ -113,21 +105,13 @@ int pkt6_receive(CalloutHandle& handle) {
         }
         DuidPtr duid = DuidPtr(new DUID(opt_duid->getData()));
 
-        // Store the id we search with so it is available down the road.
-        handle.setContext(query_user_id_label, duid);
-
         // Look for the user in the registry.
         UserPtr registered_user = user_registry->findUser(*duid);
 
-        if (registered_user) {
-          query->addClass("REGISTERED");
-        } else {
-          query->addClass("NOT_REGISTERED");
-        }
+        // Always assign a default class to a query based on registration
+        std::string default_class = user_registry->getDefaultClassByResultType(registered_user ? ResultType::REGISTERED : ResultType::NOT_REGISTERED);
+        query->addClass(default_class);
 
-        // Store user regardless. Empty user pointer means non-found. It is
-        // cheaper to fetch it and test it, than to use an exception throw.
-        handle.setContext(registered_user_label, registered_user);
         std::cout << "DHCP UserCheckHook : pkt6_receive user : "
                   << duid->toText() << " is "
                   << (registered_user ? " registered" : " not registered")
