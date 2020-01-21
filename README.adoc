@@ -4,7 +4,7 @@
     {
       "library": "/usr/lib/kea/hooks/libdhcp_user_chk_ldap.so",
       "parameters": {
-        "source_type": "ldap",
+        "sourceType": "ldap",
         "source": {
           "host": "ldap.example.somehost",
           "port": 389,
@@ -13,6 +13,10 @@
           "filter": "(cn=%s)",
           "bindDN": "cn-dhcp-agent",
           "bindPwd": "XXXXX"
+        },
+        "defaults": {
+          "positiveResultClass": "REGISTERED",
+          "negativeResultClass": "NOT_REGISTERED"
         },
         "cache": {
           "positiveResultTtl": 20,

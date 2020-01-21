@@ -55,7 +55,7 @@ const char* default_user4_id_str = "00000000";
 const char *default_user6_id_str = "00000000";
 
 UserDataSourcePtr make_datasource(const isc::data::ConstElementPtr source_type,
-                                const std::map<std::string, isc::data::ConstElementPtr>& config_map) {
+                                  const std::map<std::string, isc::data::ConstElementPtr>& config_map) {
   if (!source_type) {
     isc_throw(isc::BadValue, "Parameter source_type is missing.");
   }
@@ -88,8 +88,13 @@ int load(LibraryHandle& handle) {
            isc_throw(isc::BadValue, "The mandatory parameter \"cache\" has an invalid type. Allowed type is map.");
         }
 
+        isc::data::ConstElementPtr defaults_config = handle.getParameter("defaults");
+        if (!defaults_config || defaults_config->getType() != isc::data::Element::types::map) {
+           isc_throw(isc::BadValue, "The mandatory parameter \"defaults\" has an invalid type. Allowed type is map.");
+        }
+
         // Instantiate the registry.
-        user_registry.reset(new UserRegistry(cache_config->mapValue()));
+        user_registry.reset(new UserRegistry(cache_config->mapValue(), defaults_config->mapValue()));
 
         isc::data::ConstElementPtr src_config = handle.getParameter("source");
         if (!src_config || src_config->getType() != isc::data::Element::types::map) {
@@ -97,7 +102,7 @@ int load(LibraryHandle& handle) {
         }
 
         // Create the data source.
-        UserDataSourcePtr source = make_datasource(handle.getParameter("source_type"),
+        UserDataSourcePtr source = make_datasource(handle.getParameter("sourceType"),
                                                    src_config->mapValue());
 
         // Set the registry's data source

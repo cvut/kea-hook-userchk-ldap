@@ -58,9 +58,9 @@ int pkt4_receive(CalloutHandle& handle) {
         UserPtr registered_user = user_registry->findUser(*hwaddr);
 
         if (registered_user) {
-          query->addClass("REGISTERED");
+          query->addClass(user_registry->getDefaultClassByResultType(ResultType::REGISTERED));
         } else {
-          query->addClass("NOT_REGISTERED");
+          query->addClass(user_registry->getDefaultClassByResultType(ResultType::NOT_REGISTERED));
         }
 
         // Store user regardless. Empty user pointer means non-found. It is
@@ -101,9 +101,6 @@ int pkt6_receive(CalloutHandle& handle) {
     }
 
     try {
-        // Refresh the registry.
-        //user_registry->refresh();
-
         // Fetch the inbound packet.
         Pkt6Ptr query;
         handle.getArgument("query6", query);

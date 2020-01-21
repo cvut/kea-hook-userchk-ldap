@@ -13,7 +13,8 @@
 
 namespace user_chk {
 
-UserRegistry::UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& cache_config) {
+  UserRegistry::UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& defaults_config,
+                             const std::map<std::string, isc::data::ConstElementPtr>& cache_config) {
 
   cache_positive_result_ttl_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("positiveResultTtl",
                                                                                         isc::data::Element::types::integer,
@@ -24,6 +25,13 @@ UserRegistry::UserRegistry(const std::map<std::string, isc::data::ConstElementPt
   cache_max_size_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxSize",
                                                                              isc::data::Element::types::integer,
                                                                              cache_config)));
+
+  default_positive_result_class_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("positiveResultClass",
+                                                                                        isc::data::Element::types::string,
+                                                                                        defaults_config)));
+  default_negative_result_class_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("negativeResultClass",
+                                                                                        isc::data::Element::types::string,
+                                                                                        defaults_config)));
 
 }
 
@@ -48,8 +56,8 @@ UserRegistry::fetchFromSource(const UserId& id) {
     try {
         UserPtr user =  source_->lookupUserById(id);
         return user ?
-          ResultPtr(new Result(user, Result::ResultType::REGISTERED, std::time(nullptr) + cache_positive_result_ttl_)) :
-          ResultPtr(new Result(empty, Result::ResultType::NOT_REGISTERED, std::time(nullptr) + cache_negative_result_ttl_));
+          ResultPtr(new Result(user, ResultType::REGISTERED, std::time(nullptr) + cache_positive_result_ttl_)) :
+          ResultPtr(new Result(empty, ResultType::NOT_REGISTERED, std::time(nullptr) + cache_negative_result_ttl_));
     } catch (const std::exception& ex) {
         isc_throw (UserRegistryError, "UserRegistry: refresh failed during read"
                    << ex.what());
@@ -98,7 +106,7 @@ UserRegistry::findUser(const UserId& id) {
       result = fetchFromSource(id);
       cache(id, result);
     }
-    return result->getResult() == Result::ResultType::REGISTERED ? result->getUser() : unregistered;
+    return result->getResult() == ResultType::REGISTERED ? result->getUser() : unregistered;
 }
 
 void
@@ -134,6 +142,17 @@ const UserDataSourcePtr& UserRegistry::getSource() {
     return (source_);
 }
 
+std::string UserRegistry::getDefaultClassByResultType(ResultType type) const {
+  switch (type) {
+  case REGISTERED:
+    return (default_positive_result_class_);
+  case NOT_REGISTERED:
+    return (default_negative_result_class_);
+  }
+  isc_throw (UserRegistryError,
+             "UserRegistry: Invalid result type provided when requesting default class.");
+}
+
 
 //********************************* Result ******************************
 
@@ -147,7 +166,7 @@ Result::getUser() const {
     return (user_);
 }
 
-Result::ResultType
+ResultType
 Result::getResult() const {
     return (result_);
 }
@@ -159,7 +178,7 @@ Result::getInvalidAfter() const {
 
 bool
 Result::isExpired() const {
-    return invalid_after_ < std::time(nullptr);
+    return (invalid_after_ < std::time(nullptr));
 }
 
 } // namespace user_chk

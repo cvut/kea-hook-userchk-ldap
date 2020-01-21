@@ -20,6 +20,15 @@ namespace user_chk {
 
 enum UserDataSourceType { file, ldap };
 
+/// @brief TODO
+enum ResultType {
+    /// @brief TODO
+    REGISTERED = 0,
+    /// @brief TODO
+    NOT_REGISTERED = 1
+};
+
+
 class Result;
 
 /// @brief Defines a smart pointer to a User.
@@ -46,8 +55,9 @@ class UserRegistry {
 public:
     /// @brief Constructor
     ///
-    /// Creates a new registry with an empty list of users and no data source.
-    UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& cache_config);
+    /// Creates a new registry.
+    UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& defaults_config,
+                 const std::map<std::string, isc::data::ConstElementPtr>& cache_config);
 
     /// @brief Destructor
     ~UserRegistry();
@@ -109,6 +119,8 @@ public:
 
     void cache(const UserId& id, const ResultPtr result);
 
+    std::string getDefaultClassByResultType(ResultType type) const;
+
 private:
     /// @brief The registry of users.
     UserCache users_;
@@ -120,19 +132,16 @@ private:
     uint64_t cache_negative_result_ttl_;
     size_t cache_max_size_;
 
+    std::string default_positive_result_class_;
+    std::string default_negative_result_class_;
+
 };
+
+
 
 /// @brief TODO
 class Result {
 public:
-
-    /// @brief TODO
-    enum ResultType {
-        /// @brief TODO
-        REGISTERED = 0,
-        /// @brief TODO
-        NOT_REGISTERED = 1
-    };
 
     /// @brief Constructor
     ///
@@ -160,8 +169,6 @@ public:
 
     /// @brief Returns true iff invalid_after_ < current time
     bool isExpired() const;
-
-    void evictCache() const;
 
 private:
 
