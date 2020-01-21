@@ -12,6 +12,7 @@
 #include <dhcp/dhcp6.h>
 #include <dhcp/pkt6.h>
 #include <user_chk.h>
+#include <user_chk_log.h>
 
 using namespace isc::dhcp;
 using namespace isc::hooks;
@@ -39,8 +40,7 @@ extern "C" {
 /// @return 0 upon success, non-zero otherwise.
 int pkt4_receive(CalloutHandle& handle) {
     if (!user_registry) {
-        std::cout << "DHCP UserCheckHook : pkt4_receive UserRegistry is null"
-                  << std::endl;
+        LOG_ERROR(user_chk_logger, USER_CHK_INVALID_HOOK_STATE).arg("UserRegistry is null");
         return (1);
     }
 
@@ -58,14 +58,16 @@ int pkt4_receive(CalloutHandle& handle) {
         std::string default_class = user_registry->getDefaultClassByResultType(registered_user ? ResultType::REGISTERED : ResultType::NOT_REGISTERED);
         query->addClass(default_class);
 
-        std::cout << "DHCP UserCheckHook : pkt4_receive user : "
-                  << hwaddr->toText() << " is "
-                  << (registered_user ? " registered" : " not registered")
-                  << std::endl;
+        LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_COMMAND, USER_CHK_RESOLUTION)
+          .arg(hwaddr->toText())
+          .arg(registered_user ? "registered" : " not registered");
     } catch (const std::exception& ex) {
-        std::cout << "DHCP UserCheckHook : pkt4_receive unexpected error: "
-                  << ex.what() << std::endl;
-        return (1);
+        LOG_ERROR(user_chk_logger, USER_CHK_PKT_RECEIVE_ERROR).arg(ex.what());
+        // we handle hook errors gracefully, so that failure affects only subnets that
+        // actualy make use of information provided by this hook
+        // (ie. subnets that are available only to clients of a specific class)
+        // hence return (0)
+        return (0);
     }
 
     return (0);
@@ -87,8 +89,7 @@ int pkt4_receive(CalloutHandle& handle) {
 /// @return 0 upon success, non-zero otherwise.
 int pkt6_receive(CalloutHandle& handle) {
     if (!user_registry) {
-        std::cout << "DHCP UserCheckHook : pkt6_receive UserRegistry is null"
-                  << std::endl;
+        LOG_ERROR(user_chk_logger, USER_CHK_INVALID_HOOK_STATE).arg("UserRegistry is null");
         return (1);
     }
 
@@ -100,7 +101,7 @@ int pkt6_receive(CalloutHandle& handle) {
         // Get the DUID to use as the user identifier.
         OptionPtr opt_duid = query->getOption(D6O_CLIENTID);
         if (!opt_duid) {
-            std::cout << "DHCP6 query is missing DUID" << std::endl;
+            LOG_ERROR(user_chk_logger, USER_CHK_MISSING_DUID_QUERY);
             return (1);
         }
         DuidPtr duid = DuidPtr(new DUID(opt_duid->getData()));
@@ -112,14 +113,16 @@ int pkt6_receive(CalloutHandle& handle) {
         std::string default_class = user_registry->getDefaultClassByResultType(registered_user ? ResultType::REGISTERED : ResultType::NOT_REGISTERED);
         query->addClass(default_class);
 
-        std::cout << "DHCP UserCheckHook : pkt6_receive user : "
-                  << duid->toText() << " is "
-                  << (registered_user ? " registered" : " not registered")
-                  << std::endl;
+        LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_COMMAND, USER_CHK_RESOLUTION)
+          .arg(duid->toText())
+          .arg(registered_user ? "registered" : " not registered");
     } catch (const std::exception& ex) {
-        std::cout << "DHCP UserCheckHook : pkt6_receive unexpected error: "
-                  << ex.what() << std::endl;
-        return (1);
+        LOG_ERROR(user_chk_logger, USER_CHK_PKT_RECEIVE_ERROR).arg(ex.what());
+        // we handle hook errors gracefully, so that failure affects only subnets that
+        // actualy make use of information provided by this hook
+        // (ie. subnets that are available only to clients of a specific class)
+        // hence return (0)
+        return (0);
     }
 
     return (0);

@@ -22,3 +22,18 @@ programmatic error and should not occur.
 % USER_CHK_MULTIPLE_RESULT_ENTRIES_RECEIVED DHCP UserCheckHook multiple result entries were present in the result set.
 This is an warning message issued when the DHCP UserCheckHook has recieved
 multiple LDAP entries in a result set with a matching UserId (HW addr. or DUID).
+
+% USER_CHK_INVALID_HOOK_STATE DHCP UserCheckHook : Invalid hook state : %1
+Error message that means the hook was not properly or fully initialized. This is a progrogrammatic error and should not occur under normal circumstances.
+
+% USER_CHK_MISSING_DUID_QUERY DHCP UserCheckHook : DHCP6 query is missing DUID
+This error message signalizes that a DUID option was missing in the DHCPv6 query. The processing of DHCP request is aborted.
+
+% USER_CHK_RESOLUTION DHCP UserCheckHook : pkt4_receive user : %1 is %2
+This is a debug message that advertises result of HW address lookup in a user store.
+
+% USER_CHK_PKT_RECEIVE_ERROR DHCP UserCheckHook an unexpected error has occured during processing of pkt4_receive or pkt6_receive callback: %1
+This error message occurs when processing of packet receive callback has failed unexpectedly. The exact cause should be explained in the log message.
+
+% USER_CHK_LDAP_CONN_CLOSE_ERROR DHCP UserCheckHook UserLdap unexpected error while closing connection: %1
+This error message occurs when closing of LDAP connection has unexpectedly failed. The exact cause should be explained in the log message.

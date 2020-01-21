@@ -11,6 +11,7 @@
 
 namespace user_chk {
 
-isc::log::Logger user_chk_logger("user_chk_ldap");
+const char* USR_CHK_LOGGER_NAME = "user-chk-ldap-hooks";
+isc::log::Logger user_chk_logger(USR_CHK_LOGGER_NAME);
 
 } // namespace user_chk

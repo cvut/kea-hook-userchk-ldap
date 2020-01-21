@@ -11,7 +11,8 @@
 #include <hooks/hooks.h>
 #include <user_chk_log.h>
 #include <user_registry.h>
-//#include <user_file.h>
+#include <user_chk_log.h>
+
 #include <user_ldap.h>
 #include <util.h>
 

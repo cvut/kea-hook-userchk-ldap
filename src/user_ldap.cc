@@ -59,10 +59,7 @@ UserLdap::open() {
       conn_->bind(binddn_, bindpwd_);
       conn_open_ = true;
     } catch (LDAPException &ex) {
-
-      std::cout << "DHCP UserCheckHook : cannot open connection: "
-                << ex.what() << std::endl;
-      isc_throw(UserLdapError, "cannot open connection " << ex.what());
+      isc_throw(UserLdapError, "cannot open connection: " << ex.what());
 
     }
 }
@@ -127,6 +124,7 @@ UserLdap::close() {
     conn_open_ = false;
     conn_->unbind();
   } catch (LDAPException &ex) {
+    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ex.what());
     std::cout << "UserLdap unexpected error while closing connection: "
               << ex.what() << std::endl;
   }
