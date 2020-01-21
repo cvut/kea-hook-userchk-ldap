@@ -57,6 +57,12 @@ int pkt4_receive(CalloutHandle& handle) {
         // Look for the user in the registry.
         UserPtr registered_user = user_registry->findUser(*hwaddr);
 
+        if (registered_user) {
+          query->addClass("REGISTERED");
+        } else {
+          query->addClass("NOT_REGISTERED");
+        }
+
         // Store user regardless. Empty user pointer means non-found. It is
         // cheaper to fetch it and test it, than to use an exception throw.
         handle.setContext(registered_user_label, registered_user);
@@ -115,6 +121,12 @@ int pkt6_receive(CalloutHandle& handle) {
 
         // Look for the user in the registry.
         UserPtr registered_user = user_registry->findUser(*duid);
+
+        if (registered_user) {
+          query->addClass("REGISTERED");
+        } else {
+          query->addClass("NOT_REGISTERED");
+        }
 
         // Store user regardless. Empty user pointer means non-found. It is
         // cheaper to fetch it and test it, than to use an exception throw.

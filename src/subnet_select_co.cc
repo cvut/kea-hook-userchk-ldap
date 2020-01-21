@@ -41,7 +41,7 @@ extern "C" {
 /// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int subnet4_select(CalloutHandle& handle) {
+int subnet4_select_disabled(CalloutHandle& handle) {
     if (!user_registry) {
         LOG_ERROR(user_chk_logger, USER_CHK_SUBNET4_SELECT_REGISTRY_NULL);
         return (1);
@@ -95,7 +95,7 @@ int subnet4_select(CalloutHandle& handle) {
 /// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int subnet6_select(CalloutHandle& handle) {
+int subnet6_select_disabled(CalloutHandle& handle) {
     if (!user_registry) {
         LOG_ERROR(user_chk_logger, USER_CHK_SUBNET6_SELECT_REGISTRY_NULL);
         return (1);

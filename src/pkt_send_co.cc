@@ -66,7 +66,7 @@ extern "C" {
 /// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int pkt4_send(CalloutHandle& handle) {
+int pkt4_send_disabled(CalloutHandle& handle) {
     try {
         Pkt4Ptr response;
         handle.getArgument("response4", response);
@@ -137,7 +137,7 @@ int pkt4_send(CalloutHandle& handle) {
 /// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int pkt6_send(CalloutHandle& handle) {
+int pkt6_send_disabled(CalloutHandle& handle) {
     try {
         Pkt6Ptr response;
         handle.getArgument("response6", response);
