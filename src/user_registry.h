@@ -56,8 +56,8 @@ public:
     /// @brief Constructor
     ///
     /// Creates a new registry.
-    UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& defaults_config,
-                 const std::map<std::string, isc::data::ConstElementPtr>& cache_config);
+    UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& cache_config,
+                 const std::map<std::string, isc::data::ConstElementPtr>& defaults_config);
 
     /// @brief Destructor
     ~UserRegistry();
@@ -82,7 +82,7 @@ public:
     /// Removes the user entry if found, if not simply return.
     ///
     /// @param id The user id of the user to remove
-    void removeUser(const UserId&  id);
+    void removeUser(const UserId& id);
 
     /// @brief Finds a user in the registry by hardware address
     ///
