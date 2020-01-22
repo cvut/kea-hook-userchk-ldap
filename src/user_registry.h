@@ -109,7 +109,7 @@ public:
     /// @param source reference to the data source to use.
     ///
     /// @throw UserRegistryError if new source value is null.
-    void setSource(UserDataSourcePtr& source);
+    void setSource(const UserDataSourcePtr& source);
 
     const ResultPtr fetchFromCache(const UserId& id) const;
 
