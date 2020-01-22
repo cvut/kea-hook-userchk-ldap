@@ -10,6 +10,7 @@
 #include <user_chk_log.h>
 #include <user_ldap.h>
 #include <util.h>
+#include <signal.h>
 
 #include <boost/foreach.hpp>
 #include <errno.h>
@@ -19,7 +20,7 @@
 
 namespace user_chk {
 
-  UserLdap::UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& config): conn_open_(false) {
+  UserLdap::UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& config): conn_(LdapConnectionPtr()) {
 
     host_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("host", isc::data::Element::types::string, config)));
     port_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("port", isc::data::Element::types::integer, config)));
@@ -29,7 +30,6 @@ namespace user_chk {
     binddn_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindDN", isc::data::Element::types::string, config)));
     bindpwd_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindPwd", isc::data::Element::types::string, config)));
 
-    conn_ = LdapConnectionPtr(new LDAPConnection(host_, port_));
     if (host_.empty()) {
         isc_throw(UserLdapError, "file name cannot be blank");
     }
@@ -47,24 +47,24 @@ UserLdap::~UserLdap() {
   } catch (LDAPException &ex) {
     LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ex.what());
   }
-};
+}
 
 void
 UserLdap::open() {
-    if (isOpen()) {
+    if (conn_) {
       return;
     }
     try {
+      conn_.reset(new LDAPConnection(host_, port_));
+      // unbind to make sure we had freed ay state
+      //conn_->unbind();
       if (use_start_tls_) {
         conn_->start_tls();
         TlsOptions tls = conn_->getTlsOptions();
       }
-
       conn_->bind(binddn_, bindpwd_);
-      conn_open_ = true;
     } catch (LDAPException &ex) {
       isc_throw(UserLdapError, "cannot open connection: " << ex.what());
-
     }
 }
 
@@ -78,9 +78,20 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
   std::string f = isc::util::str::format(filter_, filter_args);
 
   try {
+
+    // when connection is closed from server side, fd is closed and on next attempt
+    // the SIGPIPE signal is received, which terminates process
+    // setting SIG_IGN as a sig. handler means that EPIPE error is returned instead
+    // for better explanation, see: https://pmhahn.github.io/SIGPIPE/
+    struct sigaction oldact = {}, act = {};
+    act.sa_handler = SIG_IGN;
+    act.sa_flags = 0;
+    sigaction(SIGPIPE, &act, &oldact);
     LDAPSearchResults* entries = conn_->search(basedn_,
                                                LDAPConnection::SEARCH_SUB,
                                                f);
+    sigaction(SIGPIPE, &oldact, NULL);
+
     if (entries == 0) {
       return UserPtr();
     }
@@ -94,6 +105,7 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
       delete next_entry;
     }
     delete entry;
+    delete entries;
 
     UserPtr user;
     try {
@@ -118,18 +130,17 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
 
 bool
 UserLdap::isOpen() const {
-    return conn_open_;
+  return (conn_.get() != 0);
 }
 
 void
 UserLdap::close() {
-  if (!isOpen()) return;
   try {
-    conn_open_ = false;
     conn_->unbind();
   } catch (LDAPException &ex) {
     LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ex.what());
   }
+  conn_.reset();
 }
 
 } // namespace user_chk

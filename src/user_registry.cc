@@ -128,12 +128,11 @@ UserRegistry::findUser(const isc::dhcp::DUID& duid) {
     return (findUser(id));
 }
 
-void UserRegistry::setSource(const UserDataSourcePtr& source) {
+void UserRegistry::setSource(const UserDataSourcePtr source) {
     if (!source) {
         isc_throw (UserRegistryError,
                    "UserRegistry: data source cannot be set to null");
     }
-
     source_ = source;
 }
 
