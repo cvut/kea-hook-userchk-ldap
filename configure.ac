@@ -34,10 +34,6 @@ AC_CHECK_DECL([__SUNPRO_CC], [SUNCXX="yes"], [SUNCXX="no"])
 AC_CHECK_DECL([__clang__], [CLANGPP="yes"], [CLANGPP="no"])
 AM_CONDITIONAL(USE_CLANGPP, test "X${CLANGPP}" = "Xyes")
 
-# Check for valgrind
-AC_PATH_PROG(VALGRIND, valgrind, no)
-AM_CONDITIONAL(HAVE_VALGRIND, test "x$VALGRIND" != "xno")
-
 AC_ARG_ENABLE(generate_messages, [AC_HELP_STRING([--enable-generate-messages],
   [indicates that the messages files will be regenerated. [default=no]])],
   enable_generate_messages=$enableval, enable_generate_messages=no)

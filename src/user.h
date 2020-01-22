@@ -156,7 +156,7 @@ public:
     /// @param user_id Id to assign to the user
     ///
     /// @throw isc::BadValue if user id is blank.
-    User(const UserId & user_id);
+    explicit User(const UserId & user_id);
 
     /// @brief Constructor
     ///
@@ -164,10 +164,10 @@ public:
     /// id data with an empty set of properties.
     ///
     /// @param id_type Type of id contained in the id vector
-    /// @param id Vector of data representing the user's id
+   /// @param id Vector of data representing the user's id
     ///
     /// @throw isc::BadValue if user id vector is empty.
-    User(UserId::UserIdType id_type, const std::vector<uint8_t>& id);
+    explicit User(UserId::UserIdType id_type, const std::vector<uint8_t>& id);
 
     /// @brief Constructor
     ///
@@ -178,7 +178,7 @@ public:
     /// @param id_str string of hex digits representing the user's id
     ///
     /// @throw isc::BadValue if user id string is empty or invalid
-    User(UserId::UserIdType id_type, const std::string& id_str);
+    explicit User(UserId::UserIdType id_type, const std::string& id_str);
 
     /// @brief Destructor
     ~User();

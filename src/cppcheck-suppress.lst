@@ -1,0 +1,10 @@
+missingInclude
+
+
+// Unused functions: there suddenly are a lot of unused function errors
+// We could address those by adding for instance early declarations or
+// (unnecessary) header files, but they were all somewhat false positives
+// When we upgrade past 1.56, we should re-check this, and perhaps enable
+// unused-functions again.
+unusedFunction
+useInitializationList:src/user_ldap.cc

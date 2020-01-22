@@ -70,7 +70,7 @@ public:
     /// @param fname pathname to the input file.
     ///
     /// @throw UserLdapError if given file name is empty.
-    UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& config_map);
+    explicit UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& config_map);
 
     /// @brief Destructor.
     ////
@@ -83,7 +83,7 @@ public:
     /// reading from the beginning of the file.
     ///
     /// @throw UserLdapError if the file cannot be opened.
-    virtual void open();
+    virtual void open() override;
 
     /// @brief Fetches the next user from the file.
     ///
@@ -96,18 +96,18 @@ public:
     /// @throw UserLdapError if an error occurs while reading.
     //virtual UserPtr readNextUser();
 
-    virtual UserPtr lookupUserById(const UserId& user_id);
+    virtual UserPtr lookupUserById(const UserId& user_id) override;
 
 
     /// @brief Closes the underlying file.
     ///
     /// Method is exception safe.
-    virtual void close();
+    virtual void close() override;
 
     /// @brief Returns true if the file is open.
     ///
     /// @return True if the underlying file is open, false otherwise.
-    virtual bool isOpen() const;
+    virtual bool isOpen() const override;
 
 
 

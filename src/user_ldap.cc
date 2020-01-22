@@ -42,7 +42,11 @@ namespace user_chk {
 }
 
 UserLdap::~UserLdap() {
-  close();
+  try {
+    conn_->unbind();
+  } catch (LDAPException &ex) {
+    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ex.what());
+  }
 };
 
 void
@@ -125,8 +129,6 @@ UserLdap::close() {
     conn_->unbind();
   } catch (LDAPException &ex) {
     LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ex.what());
-    std::cout << "UserLdap unexpected error while closing connection: "
-              << ex.what() << std::endl;
   }
 }
 
