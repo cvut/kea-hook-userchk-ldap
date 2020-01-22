@@ -28,7 +28,7 @@ noinst_LTLIBRARIES = libducl.la
 
 libducl_la_SOURCES  =
 libducl_la_SOURCES += load_unload.cc
-libducl_la_SOURCES += pkt_receive_co.cc
+libducl_la_SOURCES += buffer_receive_co.cc
 libducl_la_SOURCES += user.cc user.h
 libducl_la_SOURCES += user_chk.h
 libducl_la_SOURCES += user_chk_log.cc user_chk_log.h
