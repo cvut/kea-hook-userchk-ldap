@@ -37,3 +37,12 @@ This error message occurs when processing of packet receive callback has failed 
 
 % USER_CHK_LDAP_CONN_CLOSE_ERROR DHCP UserCheckHook UserLdap unexpected error while closing connection: %1
 This error message occurs when closing of LDAP connection has unexpectedly failed. The exact cause should be explained in the log message.
+
+% USER_CHK_LDAP_CONN_OPEN_ERROR DHCP UserCheckHook UserLdap unexpected error while opening connection: %1
+This error message occurs when opening of LDAP connection has unexpectedly failed. The exact cause should be explained in the log message.
+
+% USER_CHK_LDAP_ERROR DHCP UserCheckHook UserLdap unexpected error while performing LDAP operation: %1
+This is generinc error message that indicates LDAP operation failure. The exact cause should be explained in the log message.
+
+% USER_CHK_USER_SOURCE_ERROR DHCP UserCheckHook UserDataSource unexpected error: %1
+The exact cause should be explained in the log message.

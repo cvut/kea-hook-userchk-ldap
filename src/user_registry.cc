@@ -58,8 +58,12 @@ UserRegistry::fetchFromSource(const UserId& id) {
         return user ?
           ResultPtr(new Result(user, ResultType::REGISTERED, std::time(nullptr) + cache_positive_result_ttl_)) :
           ResultPtr(new Result(empty, ResultType::NOT_REGISTERED, std::time(nullptr) + cache_negative_result_ttl_));
+    } catch (const UserDataSourceError& ex) {
+      LOG_ERROR(user_chk_logger, USER_CHK_USER_SOURCE_ERROR).arg(ex.what());
+      // rethrow the same error
+      throw;
     } catch (const std::exception& ex) {
-        isc_throw (UserRegistryError, "UserRegistry: refresh failed during read"
+        isc_throw (UserRegistryError, "UserRegistry: user lookup failed"
                    << ex.what());
     }
 }
