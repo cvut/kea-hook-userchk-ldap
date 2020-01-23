@@ -12,7 +12,9 @@
           "baseDN": "cn=DHCP,o=example.com",
           "filter": "(cn=%s)",
           "bindDN": "cn-dhcp-agent",
-          "bindPwd": "XXXXX"
+          "bindPwd": "XXXXX",
+          "maxQueryTime": 15,
+          "maxQueryResultSize": 100
         },
         "defaults": {
           "positiveResultClass": "REGISTERED",

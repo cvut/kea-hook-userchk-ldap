@@ -29,6 +29,8 @@ namespace user_chk {
     filter_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("filter", isc::data::Element::types::string, config)));
     binddn_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindDN", isc::data::Element::types::string, config)));
     bindpwd_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindPwd", isc::data::Element::types::string, config)));
+    max_query_time_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryTime", isc::data::Element::types::integer, config)));
+    max_query_result_size_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryResultSize", isc::data::Element::types::integer, config)));
 
     if (host_.empty()) {
         isc_throw(UserLdapError, "file name cannot be blank");
@@ -55,24 +57,27 @@ UserLdap::open() {
       return;
     }
     try {
-      conn_.reset(new LDAPConnection(host_, port_));
-      // unbind to make sure we had freed ay state
-      //conn_->unbind();
+      LDAPConnection * conn = new LDAPConnection(host_, port_);
+      LDAPConstraints * constrs = new LDAPConstraints();
+      constrs->setMaxTime(max_query_time_);
+      constrs->setSizeLimit(max_query_result_size_);
+      conn->setConstraints(constrs);
+
+      conn_.reset(conn);
+
       if (use_start_tls_) {
         conn_->start_tls();
         TlsOptions tls = conn_->getTlsOptions();
       }
       conn_->bind(binddn_, bindpwd_);
     } catch (LDAPException &ex) {
-      isc_throw(UserLdapError, "cannot open connection: " << ex.what());
+      LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ex.what());
+      isc_throw(UserLdapError, "cannot open connection");
     }
 }
 
 UserPtr UserLdap::lookupUserById(const UserId& userid) {
-
-  // should be sanitized by now
   const std::string userid_str = userid.toText(':');
-
 
   std::vector<std::string> filter_args { userid_str };
   std::string f = isc::util::str::format(filter_, filter_args);
@@ -82,7 +87,7 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
     // when connection is closed from server side, fd is closed and on next attempt
     // the SIGPIPE signal is received, which terminates process
     // setting SIG_IGN as a sig. handler means that EPIPE error is returned instead
-    // for better explanation, see: https://pmhahn.github.io/SIGPIPE/
+    // for better explanation see: https://pmhahn.github.io/SIGPIPE/
     struct sigaction oldact = {}, act = {};
     act.sa_handler = SIG_IGN;
     act.sa_flags = 0;
@@ -115,16 +120,18 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
         user.reset(new User(userid));
     } catch (const std::exception& ex) {
         // should not happen
-      isc_throw(UserLdapError, "UserLdap: cannot create user entry: " << ex.what());
+      LOG_ERROR(user_chk_logger, USER_CHK_LDAP_ERROR).arg(ex.what());
+      isc_throw(UserLdapError, "UserLdap: cannot create user entry");
     }
     return user;
   } catch (LDAPException& ex) {
+    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_ERROR).arg(ex.what());
     // we assume the exception was caused by misconfiguration (on hook side
     // or LDAP server side) or by a network error. In any case, we probably want to
     // handle the issue in new connection  so we close the connection here
     // so it can be reopened on the next request
     close();
-    isc_throw(UserLdapError, "UserLdap: caught ldap exception: " << ex.what());
+    isc_throw(UserLdapError, "UserLdap: caught ldap exception: ");
   }
 }
 

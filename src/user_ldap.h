@@ -134,6 +134,12 @@ private:
     /// @brief Pathname of the input text file.
     std::string bindpwd_;
 
+    /// @brief Pathname of the input text file.
+    int64_t max_query_time_;
+
+    /// @brief Pathname of the input text file.
+    int64_t max_query_result_size_;
+
     /// @brief Input file stream.
     LdapConnectionPtr conn_;
 
