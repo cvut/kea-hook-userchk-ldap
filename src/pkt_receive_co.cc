@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// @file buffer_receive_co.cc Defines the buffer4_receive and buffer6_receive callout functions.
+/// @file pkt_receive_co.cc Defines the pkt4_receive and pkt6_receive callout functions.
 
 #include <config.h>
 #include <hooks/hooks.h>
@@ -24,32 +24,26 @@ using namespace std;
 // issues related to namespaces.
 extern "C" {
 
-/// @brief This callout is called at the "buffer4_receive" hook.
+/// @brief  This callout is called at the "pkt4_receive" hook.
 ///
-/// TODO
+/// This function determines if the DHCP client identified by the inbound
+/// DHCP query packet is in the user registry.
 ///
-///
-/// @param handle CalloutHandle.
+/// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int buffer4_receive(CalloutHandle& handle) {
+int pkt4_receive(CalloutHandle& handle) {
     if (!user_registry) {
         LOG_ERROR(user_chk_logger, USER_CHK_INVALID_HOOK_STATE).arg("UserRegistry is null");
         return (1);
     }
 
-    // Get the received unpacked message.
-    Pkt4Ptr query;
-    handle.getArgument("query4", query);
-
     try {
-        // Take a copy and unpack it.
-        // Normaly, happens in the next phase (buffer_unpack), but we have to unpack here early,
-        // so that we get access to HWAddr
-        Pkt4Ptr copy(new Pkt4(&query->data_[0], query->data_.size()));
-        copy->unpack();
 
-        HWAddrPtr hwaddr = copy->getHWAddr();
+        // Get the HWAddress to use as the user identifier.
+        Pkt4Ptr query;
+        handle.getArgument("query4", query);
+        HWAddrPtr hwaddr = query->getHWAddr();
 
         // Look for the user in the registry.
         UserPtr registered_user = user_registry->findUser(*hwaddr);
@@ -62,7 +56,7 @@ int buffer4_receive(CalloutHandle& handle) {
           .arg(hwaddr->toText())
           .arg(registered_user ? "registered" : "not registered");
     } catch (const std::exception& ex) {
-        LOG_ERROR(user_chk_logger, USER_CHK_BUFFER_RECEIVE_ERROR).arg(ex.what());
+        LOG_ERROR(user_chk_logger, USER_CHK_PKT_RECEIVE_ERROR).arg(ex.what());
         // we handle hook errors gracefully, so that failure affects only subnets that
         // actualy make use of information provided by this hook
         // (ie. subnets that are available only to clients of a specific class)
@@ -73,32 +67,27 @@ int buffer4_receive(CalloutHandle& handle) {
     return (0);
 }
 
-
-/// @brief This callout is called at the "buffer4_receive" hook.
+/// @brief  This callout is called at the "pkt6_receive" hook.
 ///
-/// Ignore DHCP and BOOTREPLY messages.
-/// Remaining packets should be BOOTP requests so add the BOOTP client class,
+/// This function determines if the DHCP client identified by the inbound
+/// DHCP query packet is in the user registry.
 ///
-/// @param handle CalloutHandle.
+/// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int buffer6_receive(CalloutHandle& handle) {
+int pkt6_receive(CalloutHandle& handle) {
     if (!user_registry) {
         LOG_ERROR(user_chk_logger, USER_CHK_INVALID_HOOK_STATE).arg("UserRegistry is null");
         return (1);
     }
 
-    // Get the received unpacked message.
-    Pkt6Ptr query;
-    handle.getArgument("query6", query);
-
     try {
-        // Take a copy and unpack it.
-        Pkt6Ptr copy(new Pkt6(&query->data_[0], query->data_.size()));
-        copy->unpack();
+        // Fetch the inbound packet.
+        Pkt6Ptr query;
+        handle.getArgument("query6", query);
 
         // Get the DUID to use as the user identifier.
-        OptionPtr opt_duid = copy->getOption(D6O_CLIENTID);
+        OptionPtr opt_duid = query->getOption(D6O_CLIENTID);
         if (!opt_duid) {
             LOG_ERROR(user_chk_logger, USER_CHK_MISSING_DUID_QUERY);
             return (1);
@@ -116,15 +105,15 @@ int buffer6_receive(CalloutHandle& handle) {
           .arg(duid->toText())
           .arg(registered_user ? "registered" : "not registered");
     } catch (const std::exception& ex) {
-        LOG_ERROR(user_chk_logger, USER_CHK_BUFFER_RECEIVE_ERROR).arg(ex.what());
+        LOG_ERROR(user_chk_logger, USER_CHK_PKT_RECEIVE_ERROR).arg(ex.what());
         // we handle hook errors gracefully, so that failure affects only subnets that
         // actualy make use of information provided by this hook
         // (ie. subnets that are available only to clients of a specific class)
         // hence return (0)
         return (0);
     }
+
     return (0);
 }
-
 
 } // end extern "C"
