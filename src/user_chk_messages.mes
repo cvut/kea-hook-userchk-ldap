@@ -32,7 +32,7 @@ This error message signalizes that a DUID option was missing in the DHCPv6 query
 % USER_CHK_RESOLUTION DHCP UserCheckHook : buffer_receive user : %1 is %2
 This is a debug message that advertises result of HW address lookup in a user store.
 
-% USER_CHK_BUFFER_RECEIVE_ERROR DHCP UserCheckHook an unexpected error has occured during processing of buffer4_receive or buffer6_receive callback: %1
+% USER_CHK_PKT_RECEIVE_ERROR DHCP UserCheckHook an unexpected error has occured during processing of pkt4_receive or pkt6_receive callback: %1
 This error message occurs when processing of packet receive callback has failed unexpectedly. The exact cause should be explained in the log message.
 
 % USER_CHK_LDAP_CONN_CLOSE_ERROR DHCP UserCheckHook UserLdap unexpected error while closing connection: %1

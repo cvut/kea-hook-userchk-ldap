@@ -66,8 +66,9 @@ UserLdap::open() {
       conn_.reset(conn);
 
       if (use_start_tls_) {
-        conn_->start_tls();
         TlsOptions tls = conn_->getTlsOptions();
+        tls.setOption( TlsOptions::REQUIRE_CERT, TlsOptions::DEMAND );
+        conn_->start_tls();
       }
       conn_->bind(binddn_, bindpwd_);
     } catch (LDAPException &ex) {

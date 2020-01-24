@@ -4,13 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// @file pkt_receive_co.cc Defines the pkt4_receive and pkt6_receive callout functions.
+/// @file subnet_select_co.cc Defines the subnet4_select and subnet6_select callout functions.
 
 #include <config.h>
 #include <hooks/hooks.h>
 #include <dhcp/pkt4.h>
 #include <dhcp/dhcp6.h>
 #include <dhcp/pkt6.h>
+#include <dhcpsrv/subnet.h>
 #include <user_chk.h>
 #include <user_chk_log.h>
 
@@ -24,7 +25,7 @@ using namespace std;
 // issues related to namespaces.
 extern "C" {
 
-/// @brief  This callout is called at the "pkt4_receive" hook.
+/// @brief  This callout is called at the "subnet4_select" hook.
 ///
 /// This function determines if the DHCP client identified by the inbound
 /// DHCP query packet is in the user registry.
@@ -32,10 +33,17 @@ extern "C" {
 /// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int pkt4_receive(CalloutHandle& handle) {
+int subnet4_select(CalloutHandle& handle) {
     if (!user_registry) {
         LOG_ERROR(user_chk_logger, USER_CHK_INVALID_HOOK_STATE).arg("UserRegistry is null");
         return (1);
+    }
+
+    // apply hook only to subnets specified by in the configuration
+    Subnet4Ptr subnet;
+    handle.getArgument("subnet4", subnet);
+    if (!user_registry->allowedForSubnet(subnet->toText())) {
+      return (0);
     }
 
     try {
@@ -67,7 +75,7 @@ int pkt4_receive(CalloutHandle& handle) {
     return (0);
 }
 
-/// @brief  This callout is called at the "pkt6_receive" hook.
+/// @brief  This callout is called at the "subnet6_select" hook.
 ///
 /// This function determines if the DHCP client identified by the inbound
 /// DHCP query packet is in the user registry.
@@ -75,10 +83,17 @@ int pkt4_receive(CalloutHandle& handle) {
 /// @param handle CalloutHandle which provides access to context.
 ///
 /// @return 0 upon success, non-zero otherwise.
-int pkt6_receive(CalloutHandle& handle) {
+int subnet6_select(CalloutHandle& handle) {
     if (!user_registry) {
         LOG_ERROR(user_chk_logger, USER_CHK_INVALID_HOOK_STATE).arg("UserRegistry is null");
         return (1);
+    }
+
+    // apply hook only to subnets specified by in the configuration
+    Subnet6Ptr subnet;
+    handle.getArgument("subnet6", subnet);
+    if (!user_registry->allowedForSubnet(subnet->toText())) {
+      return (0);
     }
 
     try {
@@ -116,4 +131,4 @@ int pkt6_receive(CalloutHandle& handle) {
     return (0);
 }
 
-} // end extern "C"
+}

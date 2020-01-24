@@ -14,7 +14,8 @@
 namespace user_chk {
 
   UserRegistry::UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& cache_config,
-                             const std::map<std::string, isc::data::ConstElementPtr>& defaults_config) {
+                             const std::map<std::string, isc::data::ConstElementPtr>& defaults_config,
+                             const std::vector<std::string>& subnets) : subnets_(subnets) {
 
   cache_positive_result_ttl_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("positiveResultTtl",
                                                                                         isc::data::Element::types::integer,
@@ -155,6 +156,9 @@ std::string UserRegistry::getDefaultClassByResultType(ResultType type) const {
              "UserRegistry: Invalid result type provided when requesting default class.");
 }
 
+bool UserRegistry::allowedForSubnet(std::string subnet) const {
+   return subnets_.empty() || std::find(subnets_.begin(), subnets_.end(), subnet) != subnets_.end();
+}
 
 //********************************* Result ******************************
 

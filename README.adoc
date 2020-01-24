@@ -5,6 +5,7 @@
       "library": "/usr/lib/kea/hooks/libdhcp_user_chk_ldap.so",
       "parameters": {
         "sourceType": "ldap",
+        "subnets": [ "10.13.37.0/24" ],
         "source": {
           "host": "ldap.example.somehost",
           "port": 389,
@@ -13,17 +14,17 @@
           "filter": "(cn=%s)",
           "bindDN": "cn-dhcp-agent",
           "bindPwd": "XXXXX",
-          "maxQueryTime": 15,
+          "maxQueryTime": 2,
           "maxQueryResultSize": 100
         },
         "defaults": {
           "positiveResultClass": "REGISTERED",
-          "negativeResultClass": "NOT_REGISTERED"
+          "negativeResultClass": "DROP"
         },
         "cache": {
           "positiveResultTtl": 20,
           "negativeResultTtl": 10,
-          "maxSize": 100
+          "maxSize": 5000
         }
       }
     }

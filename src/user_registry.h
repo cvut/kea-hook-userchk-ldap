@@ -57,7 +57,8 @@ public:
     ///
     /// Creates a new registry.
     UserRegistry(const std::map<std::string, isc::data::ConstElementPtr>& cache_config,
-                 const std::map<std::string, isc::data::ConstElementPtr>& defaults_config);
+                 const std::map<std::string, isc::data::ConstElementPtr>& defaults_config,
+                 const std::vector<std::string>& subnets);
 
     /// @brief Destructor
     ~UserRegistry();
@@ -121,6 +122,8 @@ public:
 
     std::string getDefaultClassByResultType(ResultType type) const;
 
+    bool allowedForSubnet(std::string subnet) const;
+
 private:
     /// @brief The registry of users.
     UserCache users_;
@@ -134,6 +137,8 @@ private:
 
     std::string default_positive_result_class_;
     std::string default_negative_result_class_;
+
+    std::vector<std::string> subnets_;
 
 };
 

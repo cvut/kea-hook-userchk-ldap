@@ -113,37 +113,25 @@ public:
 
 private:
 
-    /// @brief Pathname of the input text file.
     bool use_start_tls_;
 
-    /// @brief Pathname of the input text file.
     std::string host_;
 
-    /// @brief Pathname of the input text file.
     int64_t port_;
 
-    /// @brief Pathname of the input text file.
     std::string basedn_;
 
-    /// @brief Pathname of the input text file.
     std::string filter_;
 
-    /// @brief Pathname of the input text file.
     std::string binddn_;
 
-    /// @brief Pathname of the input text file.
     std::string bindpwd_;
 
-    /// @brief Pathname of the input text file.
     int64_t max_query_time_;
 
-    /// @brief Pathname of the input text file.
     int64_t max_query_result_size_;
 
-    /// @brief Input file stream.
     LdapConnectionPtr conn_;
-
-    bool conn_open_;
 
 };
 

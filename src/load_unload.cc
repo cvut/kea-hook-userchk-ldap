@@ -65,8 +65,26 @@ int load(LibraryHandle& handle) {
            isc_throw(isc::BadValue, "The mandatory parameter \"defaults\" has an invalid type. Allowed type is map.");
         }
 
+        isc::data::ConstElementPtr subnets_config = handle.getParameter("subnets");
+        if (subnets_config && subnets_config->getType() != isc::data::Element::types::list) {
+           isc_throw(isc::BadValue, "The parameter \"subnets\" has an invalid type. Allowed type is list of strings.");
+        }
+
+        std::vector<std::string> subnets;
+
+        if (subnets_config) {
+          const std::vector<isc::data::ElementPtr>& subnets_v = subnets_config->listValue();
+          for(std::vector<isc::data::ElementPtr>::const_iterator it = subnets_v.cbegin(); it != subnets_v.cend(); ++it) {
+            const isc::data::ElementPtr el = (*it);
+            if (el->getType() != isc::data::Element::types::string) {
+              isc_throw(isc::BadValue, "The parameter \"subnets\" has an invalid type. Allowed type is list of strings.");
+            }
+            subnets.push_back(el->stringValue());
+            }
+        }
+
         // Instantiate the registry.
-        user_registry.reset(new UserRegistry(cache_config->mapValue(), defaults_config->mapValue()));
+        user_registry.reset(new UserRegistry(cache_config->mapValue(), defaults_config->mapValue(), subnets));
 
         isc::data::ConstElementPtr src_config = handle.getParameter("source");
         if (!src_config || src_config->getType() != isc::data::Element::types::map) {
