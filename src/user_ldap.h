@@ -14,13 +14,9 @@
 #include <boost/shared_ptr.hpp>
 #include <fstream>
 #include <string>
-#include <LDAPConnection.h>
+#include <ldap.h>
 
 namespace user_chk {
-
-
-/// @brief Defines a smart pointer to a LdapConnection.
-typedef boost::shared_ptr<LDAPConnection> LdapConnectionPtr;
 
 
 /// @brief Thrown a UserLdap encounters an error.
@@ -110,14 +106,20 @@ public:
     virtual bool isOpen() const override;
 
 
+  /// @brief TODO
+  enum TlsMode {
+                /// @brief TODO
+                STARTTLS = 0,
+                /// @brief TODO
+                TLS = 1,
+                /// @brief TODO
+                NONE = 2,
+  };
+
 
 private:
 
-    bool use_start_tls_;
-
-    std::string host_;
-
-    int64_t port_;
+    std::string uri_;
 
     std::string basedn_;
 
@@ -131,7 +133,14 @@ private:
 
     int64_t max_query_result_size_;
 
-    LdapConnectionPtr conn_;
+    LDAP * conn_ = NULL;
+
+    TlsMode tlsMode_;
+
+    isc::data::ConstElementPtr tlsOpts_;
+
+    void bind();
+    void initTlsSession();
 
 };
 

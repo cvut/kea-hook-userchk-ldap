@@ -20,98 +20,232 @@
 
 namespace user_chk {
 
-  UserLdap::UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& config): conn_(LdapConnectionPtr()) {
+void suppress_signal(int signal, struct sigaction& act, struct sigaction& oldact) {
+  act.sa_handler = SIG_IGN;
+  act.sa_flags = 0;
+  sigemptyset(&act.sa_mask);
+  sigaction(signal, &act, &oldact);
+}
 
-    host_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("host", isc::data::Element::types::string, config)));
-    port_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("port", isc::data::Element::types::integer, config)));
-    use_start_tls_ = (* boost::static_pointer_cast<bool>(getConfigProperty("useStartTls", isc::data::Element::types::boolean, config)));
-    basedn_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("baseDN", isc::data::Element::types::string, config)));
-    filter_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("filter", isc::data::Element::types::string, config)));
-    binddn_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindDN", isc::data::Element::types::string, config)));
-    bindpwd_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindPwd", isc::data::Element::types::string, config)));
-    max_query_time_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryTime", isc::data::Element::types::integer, config)));
-    max_query_result_size_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryResultSize", isc::data::Element::types::integer, config)));
+void restore_signal(int signal, struct sigaction& oldact) {
+  sigaction(signal, &oldact, NULL);
+}
 
-    if (host_.empty()) {
-        isc_throw(UserLdapError, "file name cannot be blank");
+
+void set_option(LDAP* conn, int option, const void * invalue, std::string opt_name) {
+  int ret;
+  if ((ret = ldap_set_option(conn, option, invalue)) != LDAP_SUCCESS) {
+    LOG_ERROR(user_chk_logger, USER_CHK_USER_SOURCE_ERROR).arg("Cannot set LDAP option " + opt_name);
+    isc_throw(UserLdapError, "Cannot set LDAP option " << opt_name);
+  }
+}
+
+void set_tls_options(LDAP* conn,  UserLdap::TlsMode tls_mode, isc::data::ConstElementPtr tls_opts) {
+  if (!tls_opts) {}
+  if (tls_mode == UserLdap::TlsMode::NONE || !tls_opts) {
+    return;
+  }
+
+  const std::map<std::string, isc::data::ConstElementPtr>& config = tls_opts->mapValue();
+
+  // TODO
+
+}
+
+UserLdap::UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& config) {
+
+  uri_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("uri", isc::data::Element::types::string, config)));
+
+  basedn_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("baseDN", isc::data::Element::types::string, config)));
+  filter_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("filter", isc::data::Element::types::string, config)));
+  binddn_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindDN", isc::data::Element::types::string, config)));
+  bindpwd_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindPwd", isc::data::Element::types::string, config)));
+  max_query_time_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryTime", isc::data::Element::types::integer, config)));
+  max_query_result_size_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryResultSize", isc::data::Element::types::integer, config)));
+
+  if (uri_.empty()) {
+    isc_throw(isc::BadValue, "LDAP URI parameter cannot be blank");
+  }
+  if (basedn_.empty()) {
+    isc_throw(isc::BadValue, "base DN cannot be blank");
+  }
+  if (filter_.empty()) {
+    isc_throw(isc::BadValue, "query cannot be blank");
+  }
+
+  auto elem_it = config.find("tlsMode");
+  if (elem_it != config.end()) {
+    isc::data::ConstElementPtr elem = (*elem_it).second;
+    if (elem->getType() != isc::data::Element::types::string) {
+      isc_throw(isc::BadValue, "expected type does not match type of the property. expected: string actual: " << elem->getType());
     }
-    if (basedn_.empty()) {
-        isc_throw(UserLdapError, "base DN cannot be blank");
+    std::string tlsModeStr = elem->stringValue();
+    if (tlsModeStr.empty() || tlsModeStr == "none") {
+      tlsMode_ = NONE;
+    } else if (tlsModeStr == "starttls") {
+      tlsMode_ = STARTTLS;
+    } else if (tlsModeStr == "tls") {
+      tlsMode_ = TLS;
+    } else {
+      isc_throw(isc::BadValue, "invalid value of tlsMode property. Expected one of: [none, starttls, tls]");
     }
-    if (filter_.empty()) {
-        isc_throw(UserLdapError, "query cannot be blank");
-    }
+  }
+
+  auto tlsopts_it = config.find("tlsOpts");
+  if (tlsopts_it != config.end()) {
+       isc::data::ConstElementPtr tlsopts_elem = (*tlsopts_it).second;
+       if (tlsopts_elem->getType() != isc::data::Element::types::map) {
+         isc_throw(isc::BadValue, "expected type does not match type of the property. expected: map actual: " << tlsopts_elem->getType());
+       }
+       tlsOpts_ = tlsopts_elem;
+  }
 }
 
 UserLdap::~UserLdap() {
+  close();
+}
+
+void UserLdap::bind() {
+  struct berval creds;
+  int ret;
+  creds.bv_val = strndup(binddn_.c_str(), binddn_.length());
+  if (creds.bv_val == NULL) {
+    isc_throw(UserLdapError, "Unable to allocate memory to duplicate ldap_password");
+  }
+  creds.bv_len = binddn_.length();
+  ret = ldap_sasl_bind_s (conn_, binddn_.c_str(), LDAP_SASL_SIMPLE,
+                          &creds, NULL, NULL, NULL);
+  free(creds.bv_val);
+
+  if (ret != LDAP_SUCCESS) {
+    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ldap_err2string(ret));
+    isc_throw(UserLdapError, "Cannot bind to LDAP server");
+    close();
+  }
+}
+
+void UserLdap::initTlsSession() {
   try {
-    conn_->unbind();
-  } catch (LDAPException &ex) {
-    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ex.what());
+
+    switch (tlsMode_) {
+    case TLS:
+      {
+        int opt = LDAP_OPT_X_TLS_HARD;
+        set_option(conn_, LDAP_OPT_X_TLS, &opt, "LDAP_OPT_X_TLS");
+      }
+      break;
+      case STARTTLS:
+      {
+        int ret = ldap_start_tls_s(conn_, NULL, NULL);
+        if (ret != LDAP_SUCCESS) {
+              LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ldap_err2string(ret));
+              isc_throw(UserLdapError, "Cannot start TLS session");
+        }
+      }
+      break;
+    }
+  } catch (const UserLdapError& ex) {
+    close();
+    throw;
   }
 }
 
 void
 UserLdap::open() {
-    if (conn_) {
-      return;
-    }
-    try {
-      LDAPConnection * conn = new LDAPConnection(host_, port_);
-      LDAPConstraints * constrs = new LDAPConstraints();
-      constrs->setMaxTime(max_query_time_);
-      constrs->setSizeLimit(max_query_result_size_);
-      conn->setConstraints(constrs);
+  if (conn_ != NULL) {
+    LOG_WARN(user_chk_logger, USER_CHK_INVALID_LDAP_DATA_STORE_STATE).arg("Connection is already open.");
+    return;
+  }
 
-      conn_.reset(conn);
+  int ret;
+  ret = ldap_initialize(&conn_, uri_.c_str());
 
-      if (use_start_tls_) {
-        TlsOptions tls = conn_->getTlsOptions();
-        tls.setOption( TlsOptions::REQUIRE_CERT, TlsOptions::DEMAND );
-        conn_->start_tls();
-      }
-      conn_->bind(binddn_, bindpwd_);
-    } catch (LDAPException &ex) {
-      LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ex.what());
-      isc_throw(UserLdapError, "cannot open connection");
-    }
+  if (conn_ == NULL || ret != LDAP_SUCCESS) {
+    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ldap_err2string(ret));
+    isc_throw(UserLdapError, "Cannot initialize LDAP connection");
+  }
+
+  int version = LDAP_VERSION3;
+  if ((ret = ldap_set_option(conn_, LDAP_OPT_PROTOCOL_VERSION, &version)) != LDAP_OPT_SUCCESS) {
+    LOG_ERROR(user_chk_logger, USER_CHK_USER_SOURCE_ERROR).arg("Cannot set LDAP protocol version");
+  }
+
+  // FIXME: set contraintis
+
+  set_tls_options(conn_, tlsMode_, tlsOpts_);
+
+  initTlsSession();
+
+  bind();
 }
 
 UserPtr UserLdap::lookupUserById(const UserId& userid) {
-  const std::string userid_str = userid.toText(':');
+    const std::string userid_str = userid.toText(':');
+    std::vector<std::string> filter_args { userid_str };
+    std::string f = isc::util::str::format(filter_, filter_args);
+    int ret;
+    LDAPMessage * res;
 
-  std::vector<std::string> filter_args { userid_str };
-  std::string f = isc::util::str::format(filter_, filter_args);
+    // If the connection isn't open, open it.
+    if (!isOpen()) {
+        open();
+    }
 
-  try {
 
-    // when connection is closed from server side, fd is closed and on next attempt
-    // the SIGPIPE signal is received, which terminates process
-    // setting SIG_IGN as a sig. handler means that EPIPE error is returned instead
+    // when connection is closed from server side, fd is closed and on the next attempt
+    // SIGPIPE signal is received, which terminates the process
+    // setting SIG_IGN as a sig. handler causes EPIPE error to be returned instead
     // for better explanation see: https://pmhahn.github.io/SIGPIPE/
-    struct sigaction oldact = {}, act = {};
-    act.sa_handler = SIG_IGN;
-    act.sa_flags = 0;
-    sigaction(SIGPIPE, &act, &oldact);
-    LDAPSearchResults* entries = conn_->search(basedn_,
-                                               LDAPConnection::SEARCH_SUB,
-                                               f);
-    sigaction(SIGPIPE, &oldact, NULL);
+    {
+      struct sigaction oldact = {}, act = {};
+      suppress_signal(SIGPIPE, act, oldact);
+      ret = ldap_search_ext_s(conn_, basedn_.c_str(), LDAP_SCOPE_SUBTREE, f.c_str(), NULL, 0,
+                              NULL, NULL, NULL, 0, &res);
+      restore_signal(SIGPIPE, oldact);
+    }
 
-    if (entries == 0) {
-      return UserPtr();
+    if(ret == LDAP_SERVER_DOWN) {
+      //LDAP server was down, trying to reconnect...");
+
+      LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_COMMAND, USER_CHK_LDAP_SERVER_DOWN_RECONNECT_ERROR);
+
+      close();
+      open();
+
+      if (conn_ == NULL) {
+        isc_throw(UserLdapError, "UserLdap: reconnect failed - try again later...");
+      }
+
+      {
+        struct sigaction oldact = {}, act = {};
+        suppress_signal(SIGPIPE, act, oldact);
+        ret = ldap_search_ext_s(conn_, basedn_.c_str(), LDAP_SCOPE_SUBTREE, f.c_str(), NULL, 0,
+                                NULL, NULL, NULL, 0, &res);
+        restore_signal(SIGPIPE, oldact);
+      }
     }
-    LDAPEntry* entry = entries->getNext();
-    if (entry == 0) {
-      return UserPtr();
+
+    if (ret != LDAP_SUCCESS)  {
+      if (res) {
+        ldap_msgfree(res);
+        res = NULL;
+      }
+      LOG_ERROR(user_chk_logger, USER_CHK_LDAP_ERROR).arg(ldap_err2string (ret));
+      close();
+      isc_throw(UserLdapError, "UserLdap: unexpected error while performing LDAP operation" << ldap_err2string (ret));
     }
-    LDAPEntry* next_entry = entries->getNext();
-    if (next_entry != 0) {
+
+    int entry_count = ldap_count_entries(conn_, res);
+
+    if (entry_count == -1) {
+      isc_throw(UserLdapError, "UserLdap: failed to retrieve entry count from the result set");
+    } else if (entry_count == 0) {
+      return UserPtr();
+    } else {
       LOG_WARN(user_chk_logger, USER_CHK_MULTIPLE_RESULT_ENTRIES_RECEIVED);
-      delete next_entry;
     }
-    delete entry;
-    delete entries;
+
+    if (res) ldap_msgfree(res);
 
     UserPtr user;
     try {
@@ -124,31 +258,43 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
       LOG_ERROR(user_chk_logger, USER_CHK_LDAP_ERROR).arg(ex.what());
       isc_throw(UserLdapError, "UserLdap: cannot create user entry");
     }
-    return user;
-  } catch (LDAPException& ex) {
-    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_ERROR).arg(ex.what());
+    return (user);
+  //  } catch (LDAPException& ex) {
+  //    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_ERROR).arg(ex.what());
     // we assume the exception was caused by misconfiguration (on hook side
     // or LDAP server side) or by a network error. In any case, we probably want to
     // handle the issue in new connection  so we close the connection here
     // so it can be reopened on the next request
-    close();
-    isc_throw(UserLdapError, "UserLdap: caught ldap exception: ");
-  }
+  // close();
+  //isc_throw(UserLdapError, "UserLdap: caught ldap exception: ");
+  //}
 }
 
 bool
 UserLdap::isOpen() const {
-  return (conn_.get() != 0);
+  return (conn_ != NULL);
 }
 
 void
 UserLdap::close() {
-  try {
-    conn_->unbind();
-  } catch (LDAPException &ex) {
-    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ex.what());
+  if (!isOpen()) return;
+
+  int ret;
+  /*
+   ** ldap_unbind after a LDAP_SERVER_DOWN result
+   ** causes a SIGPIPE and the process gets terminated,
+   ** if it doesn't handle it...
+   */
+  {
+    struct sigaction oldact = {}, act = {};
+    suppress_signal(SIGPIPE, act, oldact);
+    ret = ldap_unbind_ext_s(conn_, NULL, NULL);
+    restore_signal(SIGPIPE, oldact);
   }
-  conn_.reset();
+  conn_ = NULL;
+  if (ret) {
+    LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_CLOSE_ERROR).arg(ldap_err2string(ret));
+  }
 }
 
 } // namespace user_chk

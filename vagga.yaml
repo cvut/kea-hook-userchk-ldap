@@ -45,6 +45,6 @@ containers:
         echo "http://10.38.5.223/alpine/v3.11/user" >> /etc/apk/repositories
         apk update
     - !Sh |
-        apk add kea-dev openldap-c++ clang boost-dev log4cplus-dev automake autoconf libtool g++ make strace gdb cppcheck
+        apk add kea-dev openldap-dev clang boost-dev log4cplus-dev automake autoconf libtool g++ make strace gdb cppcheck
     volumes:
       /usr/local: !Persistent {name: local}

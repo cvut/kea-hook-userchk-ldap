@@ -48,10 +48,6 @@ UserRegistry::fetchFromCache(const UserId& id) const {
 
 const ResultPtr
 UserRegistry::fetchFromSource(const UserId& id) {
-    // If the source isn't open, open it.
-    if (!source_->isOpen()) {
-        source_->open();
-    }
     static UserPtr empty;
 
     try {

@@ -64,7 +64,7 @@ int subnet4_select(CalloutHandle& handle) {
           .arg(hwaddr->toText())
           .arg(registered_user ? "registered" : "not registered");
     } catch (const std::exception& ex) {
-        LOG_ERROR(user_chk_logger, USER_CHK_PKT_RECEIVE_ERROR).arg(ex.what());
+        LOG_ERROR(user_chk_logger, USER_CHK_SUBNET_SELECT_ERROR).arg(ex.what());
         // we handle hook errors gracefully, so that failure affects only subnets that
         // actualy make use of information provided by this hook
         // (ie. subnets that are available only to clients of a specific class)
@@ -120,7 +120,7 @@ int subnet6_select(CalloutHandle& handle) {
           .arg(duid->toText())
           .arg(registered_user ? "registered" : "not registered");
     } catch (const std::exception& ex) {
-        LOG_ERROR(user_chk_logger, USER_CHK_PKT_RECEIVE_ERROR).arg(ex.what());
+        LOG_ERROR(user_chk_logger, USER_CHK_SUBNET_SELECT_ERROR).arg(ex.what());
         // we handle hook errors gracefully, so that failure affects only subnets that
         // actualy make use of information provided by this hook
         // (ie. subnets that are available only to clients of a specific class)

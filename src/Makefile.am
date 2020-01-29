@@ -49,7 +49,7 @@ lib_hooks_LTLIBRARIES = libdhcp_user_chk_ldap.la
 libdhcp_user_chk_ldap_la_SOURCES  =
 libdhcp_user_chk_ldap_la_LDFLAGS  = $(AM_LDFLAGS)
 libdhcp_user_chk_ldap_la_LDFLAGS  += -avoid-version -export-dynamic -module
-libdhcp_user_chk_ldap_la_LDFLAGS  += -lldapcpp -lkea-dhcpsrv -lkea-dhcp++ -lkea-hooks -lkea-log -lkea-util -lkea-exceptions -lkea-cc
+libdhcp_user_chk_ldap_la_LDFLAGS  += -lldap -lkea-dhcpsrv -lkea-dhcp++ -lkea-hooks -lkea-log -lkea-util -lkea-exceptions -lkea-cc
 # # -rpath /nowhere is a hack to trigger libtool to not create a
 # # convenience archive, resulting in shared modules
 # libdhcp_user_chk_ldap_la_LDFLAGS  += -rpath /nowhere
