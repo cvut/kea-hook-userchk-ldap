@@ -66,6 +66,9 @@ UserLdap::UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& conf
   boost::shared_ptr<int64_t> max_ldap_op_tries_ptr = boost::static_pointer_cast<int64_t>(getConfigProperty("maxLdapOpTries", isc::data::Element::types::integer, config, false));
   max_ldap_op_tries_ = max_ldap_op_tries_ptr ? *max_ldap_op_tries_ptr : 10;
 
+  boost::shared_ptr<int64_t> retry_delay_ptr = boost::static_pointer_cast<int64_t>(getConfigProperty("retryDelay", isc::data::Element::types::integer, config, false));
+  retry_delay_ = retry_delay_ptr ? *retry_delay_ptr : 0;
+
   if (uri_.empty()) {
     isc_throw(isc::BadValue, "LDAP URI parameter cannot be blank");
   }
@@ -125,7 +128,7 @@ void UserLdap::bind() {
         .arg("bind")
         .arg(ret)
         .arg(tries - 1);
-      //sleep(1);
+      if (retry_delay_ > 0) usleep(retry_delay_ * 1000);
     }
   } while (ret != LDAP_SUCCESS && (--tries) > 0);
 
@@ -159,7 +162,7 @@ void UserLdap::initTlsSession() {
               .arg("starttls")
               .arg(ret)
               .arg(tries - 1);
-            //sleep(1);
+            if (retry_delay_ > 0) usleep(retry_delay_ * 1000);
           }
         } while (ret != LDAP_SUCCESS && (--tries) > 0);
 
