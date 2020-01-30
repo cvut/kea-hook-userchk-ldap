@@ -11,7 +11,7 @@
 #include <user_ldap.h>
 #include <util.h>
 #include <signal.h>
-
+#include <sys/time.h>
 #include <boost/foreach.hpp>
 #include <errno.h>
 #include <iostream>
@@ -20,19 +20,19 @@
 
 namespace user_chk {
 
-void suppress_signal(int signal, struct sigaction& act, struct sigaction& oldact) {
+static void suppress_signal(int signal, struct sigaction& act, struct sigaction& oldact) {
   act.sa_handler = SIG_IGN;
   act.sa_flags = 0;
   sigemptyset(&act.sa_mask);
   sigaction(signal, &act, &oldact);
 }
 
-void restore_signal(int signal, struct sigaction& oldact) {
+static void restore_signal(int signal, struct sigaction& oldact) {
   sigaction(signal, &oldact, NULL);
 }
 
 
-void set_option(LDAP* conn, int option, const void * invalue, std::string opt_name) {
+static void set_option(LDAP* conn, int option, const void * invalue, std::string opt_name) {
   int ret;
   if ((ret = ldap_set_option(conn, option, invalue)) != LDAP_SUCCESS) {
     LOG_ERROR(user_chk_logger, USER_CHK_USER_SOURCE_ERROR).arg("Cannot set LDAP option " + opt_name);
@@ -40,7 +40,7 @@ void set_option(LDAP* conn, int option, const void * invalue, std::string opt_na
   }
 }
 
-void set_tls_options(LDAP* conn,  UserLdap::TlsMode tls_mode, isc::data::ConstElementPtr tls_opts) {
+static void set_tls_options(LDAP* conn,  UserLdap::TlsMode tls_mode, isc::data::ConstElementPtr tls_opts) {
   if (!tls_opts) {}
   if (tls_mode == UserLdap::TlsMode::NONE || !tls_opts) {
     return;
@@ -62,6 +62,9 @@ UserLdap::UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& conf
   bindpwd_ = (* boost::static_pointer_cast<std::string>(getConfigProperty("bindPwd", isc::data::Element::types::string, config)));
   max_query_time_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryTime", isc::data::Element::types::integer, config)));
   max_query_result_size_ = (* boost::static_pointer_cast<int64_t>(getConfigProperty("maxQueryResultSize", isc::data::Element::types::integer, config)));
+
+  boost::shared_ptr<int64_t> max_ldap_op_tries_ptr = boost::static_pointer_cast<int64_t>(getConfigProperty("maxLdapOpTries", isc::data::Element::types::integer, config, false));
+  max_ldap_op_tries_ = max_ldap_op_tries_ptr ? *max_ldap_op_tries_ptr : 10;
 
   if (uri_.empty()) {
     isc_throw(isc::BadValue, "LDAP URI parameter cannot be blank");
@@ -107,19 +110,30 @@ UserLdap::~UserLdap() {
 
 void UserLdap::bind() {
   struct berval creds;
-  int ret;
-  creds.bv_val = strndup(binddn_.c_str(), binddn_.length());
+  creds.bv_val = strndup(bindpwd_.c_str(), bindpwd_.length());
   if (creds.bv_val == NULL) {
     isc_throw(UserLdapError, "Unable to allocate memory to duplicate ldap_password");
   }
-  creds.bv_len = binddn_.length();
-  ret = ldap_sasl_bind_s (conn_, binddn_.c_str(), LDAP_SASL_SIMPLE,
-                          &creds, NULL, NULL, NULL);
+  creds.bv_len = bindpwd_.length();
+  int ret;
+  int tries = max_ldap_op_tries_;
+  do {
+    ret = ldap_sasl_bind_s(conn_, binddn_.c_str(), LDAP_SASL_SIMPLE,
+                           &creds, NULL, NULL, NULL);
+    if (ret != LDAP_SUCCESS) {
+      LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_COMMAND, USER_CHK_LDAP_SERVER_DOWN_RECONNECT_ERROR)
+        .arg("bind")
+        .arg(ret)
+        .arg(tries - 1);
+      //sleep(1);
+    }
+  } while (ret != LDAP_SUCCESS && (--tries) > 0);
+
   free(creds.bv_val);
 
   if (ret != LDAP_SUCCESS) {
     LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ldap_err2string(ret));
-    isc_throw(UserLdapError, "Cannot bind to LDAP server");
+    isc_throw(UserLdapError, "Cannot bind to LDAP server. err=" << ret << " " << ldap_err2string(ret));
     close();
   }
 }
@@ -136,10 +150,22 @@ void UserLdap::initTlsSession() {
       break;
       case STARTTLS:
       {
-        int ret = ldap_start_tls_s(conn_, NULL, NULL);
+        int ret;
+        int tries = max_ldap_op_tries_;
+        do {
+          ret = ldap_start_tls_s(conn_, NULL, NULL);
+          if (ret != LDAP_SUCCESS) {
+            LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_COMMAND, USER_CHK_LDAP_SERVER_DOWN_RECONNECT_ERROR)
+              .arg("starttls")
+              .arg(ret)
+              .arg(tries - 1);
+            //sleep(1);
+          }
+        } while (ret != LDAP_SUCCESS && (--tries) > 0);
+
         if (ret != LDAP_SUCCESS) {
-              LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ldap_err2string(ret));
-              isc_throw(UserLdapError, "Cannot start TLS session");
+          LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ldap_err2string(ret));
+          isc_throw(UserLdapError, "Cannot start TLS session. err=" << ret << " " << ldap_err2string(ret));
         }
       }
       break;
@@ -162,21 +188,25 @@ UserLdap::open() {
 
   if (conn_ == NULL || ret != LDAP_SUCCESS) {
     LOG_ERROR(user_chk_logger, USER_CHK_LDAP_CONN_OPEN_ERROR).arg(ldap_err2string(ret));
-    isc_throw(UserLdapError, "Cannot initialize LDAP connection");
+    isc_throw(UserLdapError, "Cannot initialize LDAP connection. err=" << ret << " " << ldap_err2string(ret));
   }
 
   int version = LDAP_VERSION3;
   if ((ret = ldap_set_option(conn_, LDAP_OPT_PROTOCOL_VERSION, &version)) != LDAP_OPT_SUCCESS) {
-    LOG_ERROR(user_chk_logger, USER_CHK_USER_SOURCE_ERROR).arg("Cannot set LDAP protocol version");
+    LOG_ERROR(user_chk_logger, USER_CHK_USER_SOURCE_ERROR).arg("Cannot set LDAP protocol version.");
   }
 
-  // FIXME: set contraintis
+   struct timeval timeout = {};
+   timeout.tv_sec = max_query_time_;
+   timeout.tv_usec = 0;
+   set_option(conn_, LDAP_OPT_TIMEOUT, &timeout, "LDAP_OPT_TIMEOUT");
+   set_option(conn_, LDAP_OPT_NETWORK_TIMEOUT, &timeout, "LDAP_OPT_NETWORK_TIMEOUT");
 
-  set_tls_options(conn_, tlsMode_, tlsOpts_);
+   set_tls_options(conn_, tlsMode_, tlsOpts_);
 
-  initTlsSession();
+   initTlsSession();
 
-  bind();
+   bind();
 }
 
 UserPtr UserLdap::lookupUserById(const UserId& userid) {
@@ -185,12 +215,14 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
     std::string f = isc::util::str::format(filter_, filter_args);
     int ret;
     LDAPMessage * res;
+    struct timeval timeout = {};
+    timeout.tv_sec = max_query_time_;
+    timeout.tv_usec = 0;
 
     // If the connection isn't open, open it.
     if (!isOpen()) {
         open();
     }
-
 
     // when connection is closed from server side, fd is closed and on the next attempt
     // SIGPIPE signal is received, which terminates the process
@@ -200,27 +232,21 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
       struct sigaction oldact = {}, act = {};
       suppress_signal(SIGPIPE, act, oldact);
       ret = ldap_search_ext_s(conn_, basedn_.c_str(), LDAP_SCOPE_SUBTREE, f.c_str(), NULL, 0,
-                              NULL, NULL, NULL, 0, &res);
+                              NULL, NULL, &timeout, max_query_result_size_, &res);
       restore_signal(SIGPIPE, oldact);
     }
 
     if(ret == LDAP_SERVER_DOWN) {
-      //LDAP server was down, trying to reconnect...");
-
-      LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_COMMAND, USER_CHK_LDAP_SERVER_DOWN_RECONNECT_ERROR);
-
-      close();
-      open();
-
-      if (conn_ == NULL) {
-        isc_throw(UserLdapError, "UserLdap: reconnect failed - try again later...");
-      }
+      LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_COMMAND, USER_CHK_LDAP_SERVER_DOWN_RECONNECT_ERROR)
+        .arg("search")
+        .arg(ret)
+        .arg(1);
 
       {
         struct sigaction oldact = {}, act = {};
         suppress_signal(SIGPIPE, act, oldact);
         ret = ldap_search_ext_s(conn_, basedn_.c_str(), LDAP_SCOPE_SUBTREE, f.c_str(), NULL, 0,
-                                NULL, NULL, NULL, 0, &res);
+                                NULL, NULL, &timeout, max_query_result_size_, &res);
         restore_signal(SIGPIPE, oldact);
       }
     }
@@ -241,8 +267,8 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
       isc_throw(UserLdapError, "UserLdap: failed to retrieve entry count from the result set");
     } else if (entry_count == 0) {
       return UserPtr();
-    } else {
-      LOG_WARN(user_chk_logger, USER_CHK_MULTIPLE_RESULT_ENTRIES_RECEIVED);
+    } else if (entry_count != 1) {
+      LOG_WARN(user_chk_logger, USER_CHK_MULTIPLE_RESULT_ENTRIES_RECEIVED).arg(entry_count);
     }
 
     if (res) ldap_msgfree(res);

@@ -81,7 +81,6 @@ void
 UserRegistry::cache(const UserId& id, const ResultPtr result) {
   auto it = users_.find(id);
   if (it != users_.end()) {
-    //LOG_DEBUG(user_chk_logger, USER_CHK_MULTIPLE_RESULT_ENTRIES_RECEIVED);
     users_.erase(it);
   }
 
@@ -101,8 +100,10 @@ UserRegistry::findUser(const UserId& id) {
     static UserPtr unregistered;
     ResultPtr result;
     if (auto tmp = fetchFromCache(id)) {
+      LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_TRACE_DETAIL_DATA, USER_CHK_CACHE_HIT).arg(id.toText(':'));
       result = tmp;
     } else {
+      LOG_DEBUG(user_chk_logger, isc::log::DBGLVL_TRACE_DETAIL_DATA, USER_CHK_CACHE_MISS).arg(id.toText(':'));
       result = fetchFromSource(id);
       cache(id, result);
     }
@@ -180,7 +181,7 @@ Result::getInvalidAfter() const {
 
 bool
 Result::isExpired() const {
-    return (invalid_after_ < std::time(nullptr));
+  return (invalid_after_ <= std::time(nullptr));
 }
 
 } // namespace user_chk

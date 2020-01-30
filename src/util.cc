@@ -10,12 +10,20 @@
 
 namespace user_chk {
 
-boost::shared_ptr<void> getConfigProperty(std::string key, isc::data::Element::types type, const std::map<std::string, isc::data::ConstElementPtr>& config) {
+  boost::shared_ptr<void> getConfigProperty(std::string key, isc::data::Element::types type, const std::map<std::string, isc::data::ConstElementPtr>& config) {
+    return getConfigProperty(key, type, config, true);
+  }
+
+  boost::shared_ptr<void> getConfigProperty(std::string key, isc::data::Element::types type, const std::map<std::string, isc::data::ConstElementPtr>& config, bool required) {
     auto elem_it = config.find(key);
 
     if (elem_it == config.end()) {
-      isc_throw(isc::BadValue, "configuration error: Required parameter '"
-                << key << "' is missing ");
+      if (required) {
+        isc_throw(isc::BadValue, "configuration error: Required parameter '"
+                  << key << "' is missing ");
+      }
+      // property is not required so return an empty pointer and let the caller handle this situation (eg. provide default value)
+      return boost::shared_ptr<void>();
     }
     isc::data::ConstElementPtr elem = (*elem_it).second;
     if (elem->getType() != type) {

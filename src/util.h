@@ -13,13 +13,9 @@
 
 namespace user_chk {
 
-/// \brief A Set of C++ Utilities for Manipulating Strings
-
-///
-/// \brief A standard string util exception that is thrown if getToken or
-/// numToToken are called with bad input data
-///
 boost::shared_ptr<void> getConfigProperty(std::string key, isc::data::Element::types type, const std::map<std::string, isc::data::ConstElementPtr>& config);
+
+boost::shared_ptr<void> getConfigProperty(std::string key, isc::data::Element::types type, const std::map<std::string, isc::data::ConstElementPtr>& config, bool required);
 
 }
 

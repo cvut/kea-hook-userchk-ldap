@@ -19,7 +19,7 @@ This is an error message issued when the DHCP UserCheckHook subnet4_select hook
 has been invoked but the UserRegistry has not been created.  This is a
 programmatic error and should not occur.
 
-% USER_CHK_MULTIPLE_RESULT_ENTRIES_RECEIVED DHCP UserCheckHook multiple result entries were present in the result set.
+% USER_CHK_MULTIPLE_RESULT_ENTRIES_RECEIVED DHCP UserCheckHook multiple result entries were present in the result set. Expected 1, but got %1
 This is an warning message issued when the DHCP UserCheckHook has recieved
 multiple LDAP entries in a result set with a matching UserId (HW addr. or DUID).
 
@@ -41,8 +41,8 @@ This error message occurs when closing of LDAP connection has unexpectedly faile
 % USER_CHK_LDAP_CONN_OPEN_ERROR DHCP UserCheckHook UserLdap unexpected error while opening connection: %1
 This error message occurs when opening of LDAP connection has unexpectedly failed. The exact cause should be explained in the log message.
 
-% USER_CHK_LDAP_SERVER_DOWN_RECONNECT_ERROR DHCP UserCheckHook UserLdap LDAP Server was down when trying to perform LDAP operation (probably connection died). Trying to reconnect now.
-This error message occurs when search operation returns LDAP_SERVER_DOWN status code. In this case reconnect is attempted.
+% USER_CHK_LDAP_SERVER_DOWN_RECONNECT_ERROR DHCP UserCheckHook UserLdap LDAP operation %1 failed with %2. Retrying now... Number of tries left %3
+This error message occurs when operation (search/bind/starttls) returns an error status code. In this case reconnect (in case of search) or retry (bind/starttls) is attempted.
 
 % USER_CHK_LDAP_ERROR DHCP UserCheckHook UserLdap unexpected error while performing LDAP operation: %1
 This is generinc error message that indicates LDAP operation failure. The exact cause should be explained in the log message.
@@ -52,3 +52,9 @@ The exact cause should be explained in the log message.
 
 % USER_CHK_INVALID_LDAP_DATA_STORE_STATE DHCP UserCheckHook : Invalid user data store state : %1
 Error message usualy means that the LDAP connection is in unexpected state or is not properly or fully initialized. This is a progrogrammatic error and should not occur under normal circumstances.
+
+% USER_CHK_CACHE_HIT DHCP UserCheckHook : Cache hit for user ID : %1
+This is a debug message that signifies cache hit.
+
+% USER_CHK_CACHE_MISS DHCP UserCheckHook : Cache miss for user ID : %1
+This is a debug message that signifies cache hit.

@@ -7,14 +7,14 @@
         "sourceType": "ldap",
         "subnets": [ "10.13.37.0/24" ],
         "source": {
-          "uri": "ldap://ldap.example1.somehost:389 ldap://ldap.example2.somehost:389",
+          "uri": "ldaps://ldap.example1.somehost:636 ldaps://ldap.example2.somehost:636",
           "baseDN": "cn=DHCP,o=example.com",
           "filter": "(cn=%s)",
           "bindDN": "cn-dhcp-agent",
           "bindPwd": "XXXXX",
           "maxQueryTime": 2,
           "maxQueryResultSize": 100,
-          "tlsMode": "STARTTLS"
+          "tlsMode": "tls"
         },
         "defaults": {
           "positiveResultClass": "REGISTERED",

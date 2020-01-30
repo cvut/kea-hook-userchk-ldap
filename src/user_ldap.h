@@ -130,8 +130,8 @@ private:
     std::string bindpwd_;
 
     int64_t max_query_time_;
-
     int64_t max_query_result_size_;
+    int64_t max_ldap_op_tries_;
 
     LDAP * conn_ = NULL;
 
