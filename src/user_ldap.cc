@@ -69,6 +69,12 @@ UserLdap::UserLdap(const std::map<std::string, isc::data::ConstElementPtr>& conf
   boost::shared_ptr<int64_t> retry_delay_ptr = boost::static_pointer_cast<int64_t>(getConfigProperty("retryDelay", isc::data::Element::types::integer, config, false));
   retry_delay_ = retry_delay_ptr ? *retry_delay_ptr : 0;
 
+  boost::shared_ptr<int64_t> ldap_api_timeout_ptr = boost::static_pointer_cast<int64_t>(getConfigProperty("ldapApiTimeout", isc::data::Element::types::integer, config, false));
+  ldap_api_timeout_ = ldap_api_timeout_ptr ? *ldap_api_timeout_ptr : -1;
+
+  boost::shared_ptr<int64_t> network_timeout_ptr = boost::static_pointer_cast<int64_t>(getConfigProperty("networkTimeout", isc::data::Element::types::integer, config, false));
+  network_timeout_ = network_timeout_ptr ? *network_timeout_ptr : -1;
+
   if (uri_.empty()) {
     isc_throw(isc::BadValue, "LDAP URI parameter cannot be blank");
   }
@@ -199,20 +205,29 @@ UserLdap::open() {
     LOG_ERROR(user_chk_logger, USER_CHK_USER_SOURCE_ERROR).arg("Cannot set LDAP protocol version.");
   }
 
-   struct timeval timeout = {};
-   timeout.tv_sec = max_query_time_;
-   timeout.tv_usec = 0;
-   set_option(NULL, LDAP_OPT_TIMEOUT, &timeout, "LDAP_OPT_TIMEOUT");
+  if (ldap_api_timeout_ != -1) {
+    struct timeval api_timeout = {};
+    api_timeout.tv_sec = ldap_api_timeout_;
+    api_timeout.tv_usec = 0;
+    set_option(NULL, LDAP_OPT_TIMEOUT, &api_timeout, "LDAP_OPT_TIMEOUT");
+  }
 
-   // restart connect/select syscall on EINTR
-   void * restart = LDAP_OPT_ON;
-   set_option(NULL, LDAP_OPT_RESTART, &restart, "LDAP_OPT_RESTART");
+  if (network_timeout_ != -1) {
+    struct timeval net_timeout = {};
+    net_timeout.tv_sec = network_timeout_;
+    net_timeout.tv_usec = 0;
+    set_option(NULL, LDAP_OPT_NETWORK_TIMEOUT, &net_timeout, "LDAP_OPT_NETWORK_TIMEOUT");
+  }
 
-   set_tls_options(conn_, tlsMode_, tlsOpts_);
+  // restart connect/select syscall on EINTR
+  void * restart = LDAP_OPT_ON;
+  set_option(NULL, LDAP_OPT_RESTART, &restart, "LDAP_OPT_RESTART");
 
-   initTlsSession();
+  set_tls_options(conn_, tlsMode_, tlsOpts_);
 
-   bind();
+  initTlsSession();
+
+  bind();
 }
 
 UserPtr UserLdap::lookupUserById(const UserId& userid) {
@@ -247,7 +262,7 @@ UserPtr UserLdap::lookupUserById(const UserId& userid) {
         .arg("search")
         .arg(ret)
         .arg(1);
-
+      if (retry_delay_ > 0) usleep(retry_delay_ * 1000);
       {
         struct sigaction oldact = {}, act = {};
         suppress_signal(SIGPIPE, act, oldact);

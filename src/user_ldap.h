@@ -129,6 +129,8 @@ private:
 
     std::string bindpwd_;
 
+    int64_t ldap_api_timeout_;
+    int64_t network_timeout_;
     int64_t max_query_time_;
     int64_t max_query_result_size_;
     int64_t max_ldap_op_tries_;
