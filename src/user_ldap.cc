@@ -202,8 +202,11 @@ UserLdap::open() {
    struct timeval timeout = {};
    timeout.tv_sec = max_query_time_;
    timeout.tv_usec = 0;
-   set_option(conn_, LDAP_OPT_TIMEOUT, &timeout, "LDAP_OPT_TIMEOUT");
-   set_option(conn_, LDAP_OPT_NETWORK_TIMEOUT, &timeout, "LDAP_OPT_NETWORK_TIMEOUT");
+   set_option(NULL, LDAP_OPT_TIMEOUT, &timeout, "LDAP_OPT_TIMEOUT");
+
+   // restart connect/select syscall on EINTR
+   void * restart = LDAP_OPT_ON;
+   set_option(NULL, LDAP_OPT_RESTART, &restart, "LDAP_OPT_RESTART");
 
    set_tls_options(conn_, tlsMode_, tlsOpts_);
 
