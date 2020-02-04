@@ -1,3 +1,42 @@
+= kea-hook-userchk-ldap
+
+This is a hook for the Kea DHCP server that provides a means to tag DHCP packets with a client class based on registration in an external LDAP database.
+The to-be assigned class is determined based on a result of LDAP search query. The name assigned classes can be configured by `positiveResultClass` and `negativeResultClass` configuration parameters (see below).
+
+The implementation is heavily inspired by the example [user_chk hook](https://kea.readthedocs.io/en/latest/arm/hooks.html#user-chk-checking-user-access) hook with notable differences:
+
+* You can restrict which subnets this hook should apply to. This means that the class resolution has to happen in `subnet_select` phase and the client class assigned by this hook cannot itself be used for *subnet* selection. Instead, we have to use this class information for restricting use of a specific *pool* defined within a subnet (see [14.7. Configuring Pools With Class Information](https://kea.readthedocs.io/en/latest/arm/classify.html#configuring-pools-with-class-information) in the official Kea documentation for more details )
+* Simple caching layer of client registration resolution results is present. This caching mechanism serves a sole purpose of protecting backend data stores against traffic caused by bursts of DHCP packets (eg. from misconfigured DHCP clients). The caching functionality should not be considered an effective protection against targeted DDoS attacks.
+* Functionality of assigning per-address DHCP options to a packet is not provided.
+
+
+== Installation
+
+For build you will need development files for following projects:
+* Kea
+* boost
+* log4cplus
+
+You will also need the autotools toolchain (at least autoconf, automake and libtool is required).
+
+To build a hook run:
+
+[source,shell]
+----
+libtoolize && \
+aclocal && \
+autoheader && \
+autoconf && \
+automake --add-missing && \
+./configure --enable-generate-messages && \
+make
+----
+
+You can also include vagga.yaml file to prepare your build environment using [Vagga](https://github.com/tailhook/vagga) (mainly for testing purposes).
+
+== Configuration
+
+First, register a hook library with appropriate configuration as follows:
 [source,json]
 ----
   "hooks-libraries": [
@@ -5,20 +44,25 @@
       "library": "/usr/lib/kea/hooks/libdhcp_user_chk_ldap.so",
       "parameters": {
         "sourceType": "ldap",
-        "subnets": [ "10.13.37.0/24" ],
+        "subnets": [ "10.0.1.0/24", "10.0.2.0/24" ],
         "source": {
           "uri": "ldaps://ldap.example1.somehost:636 ldaps://ldap.example2.somehost:636",
           "baseDN": "cn=DHCP,o=example.com",
           "filter": "(cn=%s)",
-          "bindDN": "cn-dhcp-agent",
+          "bindDN": "cn=dhcp-agent,ou=agents,o=example.com",
           "bindPwd": "XXXXX",
           "maxQueryTime": 2,
           "maxQueryResultSize": 100,
-          "tlsMode": "tls"
+          "tlsMode": "tls",
+          "maxQueryResultSize": 10
+          "maxQueryTime": 2
+          "ldapApiTimeout": 2
+          "networkTimeout": 2
+          "maxLdapOpTries": 3
         },
         "defaults": {
-          "positiveResultClass": "REGISTERED",
-          "negativeResultClass": "DROP"
+          "positiveResultClass": "registered",
+          "negativeResultClass": "not-registered"
         },
         "cache": {
           "positiveResultTtl": 20,
@@ -28,5 +72,25 @@
       }
     }
   ]
-
 ----
+
+Then, you can restrict access to DHCP pool based on client class:
+
+[source,json]
+----
+  "subnet4": [
+    {
+      "subnet": "10.0.1.0/24",
+      "pools": [
+        {
+          "client-class": "registered",
+          "pool": "10.0.1.210 - 10.0.1.250"
+        }
+      ]
+   }
+----
+
+== TODO
+
+[] Resolve client class name from the corresponding LDAP entry simillary to LDAP integration in legacy ISC DHCP
+[] Write integration tests or somesuch

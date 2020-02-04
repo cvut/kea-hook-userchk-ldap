@@ -40,11 +40,6 @@ containers:
     setup:
     - !Alpine v3.11
     - !Repo community
-    - !Sh |
-        cp /work/.keys/spaceji3@fit.cvut.cz-5ae1b240.rsa.pub /etc/apk/keys
-        echo "http://10.38.5.223/alpine/v3.11/user" >> /etc/apk/repositories
-        apk update
-    - !Sh |
-        apk add kea-dev openldap-dev clang boost-dev log4cplus-dev automake autoconf libtool g++ make strace gdb cppcheck
+    - !Install [kea-dev, openldap-dev, clang, boost-dev, log4cplus-dev, automake, autoconf, libtool, g++, make, strace, gdb, cppcheck]
     volumes:
       /usr/local: !Persistent {name: local}
