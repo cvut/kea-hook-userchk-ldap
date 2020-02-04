@@ -3,11 +3,11 @@
 This is a hook for the Kea DHCP server that provides a means to tag DHCP packets with a client class based on registration in an external LDAP database.
 The to-be assigned class is determined based on a result of LDAP search query. The name assigned classes can be configured by `positiveResultClass` and `negativeResultClass` configuration parameters (see below).
 
-The implementation is heavily inspired by the example [user_chk hook](https://kea.readthedocs.io/en/latest/arm/hooks.html#user-chk-checking-user-access) hook with notable differences:
+The implementation is heavily inspired by the example https://kea.readthedocs.io/en/latest/arm/hooks.html#user-chk-checking-user-access[user_chk hook] hook with notable differences:
 
-* You can restrict which subnets this hook should apply to. This means that the class resolution has to happen in `subnet_select` phase and the client class assigned by this hook cannot itself be used for *subnet* selection. Instead, we have to use this class information for restricting use of a specific *pool* defined within a subnet (see [14.7. Configuring Pools With Class Information](https://kea.readthedocs.io/en/latest/arm/classify.html#configuring-pools-with-class-information) in the official Kea documentation for more details )
+* You can restrict which subnets this hook should apply to. This means that the class resolution has to happen in `subnet_select` phase and the client class assigned by this hook cannot itself be used for *subnet* selection. Instead, we have to use this class information for restricting use of a specific *pool* defined within a subnet (see https://kea.readthedocs.io/en/latest/arm/classify.html#configuring-pools-with-class-information[14.7. Configuring Pools With Class Information] in the official Kea documentation for more details )
 * Simple caching layer of client registration resolution results is present. This caching mechanism serves a sole purpose of protecting backend data stores against traffic caused by bursts of DHCP packets (eg. from misconfigured DHCP clients). The caching functionality should not be considered an effective protection against targeted DDoS attacks.
-* Functionality of assigning per-address DHCP options to a packet is not provided.
+* Functionality of assigning per-address DHCP options is not provided.
 
 
 == Installation
@@ -32,7 +32,7 @@ automake --add-missing && \
 make
 ----
 
-You can also include vagga.yaml file to prepare your build environment using [Vagga](https://github.com/tailhook/vagga) (mainly for testing purposes).
+You can also use included `vagga.yaml` file to prepare your build environment using https://github.com/tailhook/vagga[Vagga] (mainly for testing purposes).
 
 == Configuration
 
@@ -73,16 +73,16 @@ First, register a hook library with appropriate configuration as follows:
 ----
 <1> So far, only LDAP data source is supported.
 <2> Subnet name as defined in `subnet4`/`subnet6` sections.
-<3> Comma or whitespace-delimited list of [LDAP URIs](http://www.openldap.org/software//man.cgi?query=ldap_init&sektion=3&apropos=0&manpath=OpenLDAP+2.4-Release) of backend LDAP server(s). Failover between hosts is provided by the underlying libldap library.
+<3> Comma or whitespace-delimited list of http://www.openldap.org/software//man.cgi?query=ldap_init&sektion=3&apropos=0&manpath=OpenLDAP+2.4-Release[LDAP URIs] of backend LDAP server(s). Failover between hosts is provided by the underlying libldap library.
 <4> Base distinguished name (DN) for performing LDAP search. Searches are always performed with a `subtree` scope specified.
-<5> Filter template with a single, mandatory string parameter (denoted as `%s`) containing hexadecimal serialization (: delimited) of clients HW address (in case of DHCPv4 client) or DUID (DHCPv6 clients).
+<5> Filter template with a single, mandatory string parameter (denoted as `%s`) containing hexadecimal serialization (delimited by `:`) of clients HW address (in case of DHCPv4 client) or DUID (DHCPv6 clients).
 <6> DN of technical acount under used for LDAP authentication.
 <7> Password credential used for LDAP authentication.
 <8> Limits how many entries may server send in a response before replying with a "Size Limit Exceeded" error.
 <9> Selects TLS mode for a connection. Allowed values are `none`, `starttls` and `tls`. The `tls` value requires `ldaps://` schema to be specified in the `uri` parameter.
 <10> Limits how long should server process the search request before replying with a "Time Limit Exceeded" error. The limit is specified in seconds.
-<11> Number of seconds the hook is allowed to block while performing LDAP API operation. (see [LDAP_OPT_NETWORK_TIMEOUT](https://linux.die.net/man/3/ldap_set_option) option for details)
-<12> Number of seconds the hook is allowed to block on a syscall (connect/poll/select) caused by an LDAP operation. (see [LDAP_OPT_TIMEOUT](https://linux.die.net/man/3/ldap_set_option) option for details)
+<11> Number of seconds the hook is allowed to block while performing LDAP API operation. (see https://linux.die.net/man/3/ldap_set_option[LDAP_OPT_NETWORK_TIMEOUT] option for details)
+<12> Number of seconds the hook is allowed to block on a syscall (connect/poll/select) caused by an LDAP operation. (see https://linux.die.net/man/3/ldap_set_option[LDAP_OPT_TIMEOUT] option for details)
 <13> Specifies hom many times should the LDAP operation be retried in case of failure. This option currently applies only to BIND and STARTTLS operations. Search requests are always repeated once at most.
 <14> Specifies name of client class that should be assigned to DHCP packet of clients registered in LDAP
 <15> Specifies name of client class that should be assigned to DHCP packets of clients without registration
