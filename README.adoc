@@ -43,36 +43,52 @@ First, register a hook library with appropriate configuration as follows:
     {
       "library": "/usr/lib/kea/hooks/libdhcp_user_chk_ldap.so",
       "parameters": {
-        "sourceType": "ldap",
-        "subnets": [ "10.0.1.0/24", "10.0.2.0/24" ],
+        "sourceType": "ldap", // <1>
+        "subnets": [ "10.0.1.0/24", "10.0.2.0/24" ], // <2>
         "source": {
-          "uri": "ldaps://ldap.example1.somehost:636 ldaps://ldap.example2.somehost:636",
-          "baseDN": "cn=DHCP,o=example.com",
-          "filter": "(cn=%s)",
-          "bindDN": "cn=dhcp-agent,ou=agents,o=example.com",
-          "bindPwd": "XXXXX",
-          "maxQueryTime": 2,
-          "maxQueryResultSize": 100,
-          "tlsMode": "tls",
-          "maxQueryResultSize": 10
-          "maxQueryTime": 2
-          "ldapApiTimeout": 2
-          "networkTimeout": 2
-          "maxLdapOpTries": 3
+          "uri": "ldaps://ldap.example1.somehost:636 ldaps://ldap.example2.somehost:636", // <3>
+          "baseDN": "cn=DHCP,o=example.com", // <4>
+          "filter": "(cn=%s)", // <5>
+          "bindDN": "cn=dhcp-agent,ou=agents,o=example.com", // <6>
+          "bindPwd": "XXXXX", // <7>
+          "maxQueryResultSize": 100, // <8>
+          "tlsMode": "tls", // <9>
+          "maxQueryTime": 2, // <10>
+          "ldapApiTimeout": 2, // <11>
+          "networkTimeout": 2, // <12>
+          "maxLdapOpTries": 3 // <13>
         },
         "defaults": {
-          "positiveResultClass": "registered",
-          "negativeResultClass": "not-registered"
+          "positiveResultClass": "registered", // <14>
+          "negativeResultClass": "not-registered" // <15>
         },
         "cache": {
-          "positiveResultTtl": 20,
-          "negativeResultTtl": 10,
-          "maxSize": 5000
+          "positiveResultTtl": 20, // <16>
+          "negativeResultTtl": 10, // <17>
+          "maxSize": 5000 // <18>
         }
       }
     }
   ]
 ----
+<1> So far, only LDAP data source is supported.
+<2> Subnet name as defined in `subnet4`/`subnet6` sections.
+<3> Comma or whitespace-delimited list of [LDAP URIs](http://www.openldap.org/software//man.cgi?query=ldap_init&sektion=3&apropos=0&manpath=OpenLDAP+2.4-Release) of backend LDAP server(s). Failover between hosts is provided by the underlying libldap library.
+<4> Base distinguished name (DN) for performing LDAP search. Searches are always performed with a `subtree` scope specified.
+<5> Filter template with a single, mandatory string parameter (denoted as `%s`) containing hexadecimal serialization (: delimited) of clients HW address (in case of DHCPv4 client) or DUID (DHCPv6 clients).
+<6> DN of technical acount under used for LDAP authentication.
+<7> Password credential used for LDAP authentication.
+<8> Limits how many entries may server send in a response before replying with a "Size Limit Exceeded" error.
+<9> Selects TLS mode for a connection. Allowed values are `none`, `starttls` and `tls`. The `tls` value requires `ldaps://` schema to be specified in the `uri` parameter.
+<10> Limits how long should server process the search request before replying with a "Time Limit Exceeded" error. The limit is specified in seconds.
+<11> Number of seconds the hook is allowed to block while performing LDAP API operation. (see [LDAP_OPT_NETWORK_TIMEOUT](https://linux.die.net/man/3/ldap_set_option) option for details)
+<12> Number of seconds the hook is allowed to block on a syscall (connect/poll/select) caused by an LDAP operation. (see [LDAP_OPT_TIMEOUT](https://linux.die.net/man/3/ldap_set_option) option for details)
+<13> Specifies hom many times should the LDAP operation be retried in case of failure. This option currently applies only to BIND and STARTTLS operations. Search requests are always repeated once at most.
+<14> Specifies name of client class that should be assigned to DHCP packet of clients registered in LDAP
+<15> Specifies name of client class that should be assigned to DHCP packets of clients without registration
+<16> Specifies how long (in seconds) should successful registration checks be cached.
+<17> Specifies how long (in seconds) should unsuccessful registration checks be cached.
+<18> Specifies the cache size.
 
 Then, you can restrict access to DHCP pool based on client class:
 
@@ -92,5 +108,5 @@ Then, you can restrict access to DHCP pool based on client class:
 
 == TODO
 
-[] Resolve client class name from the corresponding LDAP entry simillary to LDAP integration in legacy ISC DHCP
-[] Write integration tests or somesuch
+* [ ] Resolve client class name from the corresponding LDAP entry simillary to LDAP integration in legacy ISC DHCP
+* [ ] Write integration tests or somesuch
