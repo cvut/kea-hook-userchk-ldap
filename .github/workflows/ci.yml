@@ -1,0 +1,19 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: docker://alpine:3.11
+    steps:
+      - uses: actions/checkout@v2
+      - name: install build dependencies
+        run: apk add build-base autoconf automake kea-dev libtool openldap-dev boost-dev log4cplus-dev
+      - name: autogen
+        run: ./autogen.sh
+      - name: configure
+        run: ./configure --enable-generate-messages
+      - name: make
+        run: make
