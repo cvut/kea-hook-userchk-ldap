@@ -1,4 +1,7 @@
 = kea-hook-userchk-ldap
+:gh-name: cvut/kea-hook-userchk-ldap
+
+image:https://github.com/{gh-name}/workflows/CI/badge.svg?branch=master[link="https://github.com/{gh-name}/actions?query=workflow:CI+branch:master", title="Build status"]
 
 This is a hook for the Kea DHCP server that provides a means to tag DHCP packets with a client class based on registration in an external LDAP database.
 The to-be assigned class is determined based on a result of LDAP search query. The name assigned classes can be configured by `positiveResultClass` and `negativeResultClass` configuration parameters (see below).
