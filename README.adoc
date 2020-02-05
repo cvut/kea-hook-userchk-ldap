@@ -24,12 +24,8 @@ To build a hook run:
 
 [source,shell]
 ----
-libtoolize && \
-aclocal && \
-autoheader && \
-autoconf && \
-automake --add-missing && \
-./configure --enable-generate-messages && \
+./autogen.sh
+./configure --enable-generate-messages
 make
 ----
 

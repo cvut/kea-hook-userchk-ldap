@@ -17,11 +17,7 @@ commands:
     description:
     container: alpine
     run: |
-      libtoolize && \
-      aclocal && \
-      autoheader && \
-      autoconf && \
-      automake --add-missing && \
+      ./autogen.sh && \
       ./configure --enable-generate-messages && \
       make
     environ:
